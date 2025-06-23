@@ -1,0 +1,1 @@
+# ThriveAds Platform Backend

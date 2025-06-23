@@ -1,0 +1,30 @@
+{
+  "name": "thriveads-platform",
+  "version": "1.0.0",
+  "description": "Meta advertising analytics platform",
+  "private": true,
+  "workspaces": [
+    "thriveads-client-platform"
+  ],
+  "scripts": {
+    "dev:frontend": "cd thriveads-client-platform && npm run dev",
+    "dev:backend": "cd thriveads-backend && python -m uvicorn main:app --reload",
+    "build:frontend": "cd thriveads-client-platform && npm run build",
+    "start:frontend": "cd thriveads-client-platform && npm start",
+    "install:frontend": "cd thriveads-client-platform && npm install",
+    "install:backend": "cd thriveads-backend && pip install -r requirements.txt",
+    "setup": "npm run install:frontend && npm run install:backend",
+    "lint:frontend": "cd thriveads-client-platform && npm run lint",
+    "test:frontend": "cd thriveads-client-platform && npm test",
+    "test:backend": "cd thriveads-backend && pytest"
+  },
+  "keywords": [
+    "meta",
+    "facebook",
+    "advertising",
+    "analytics",
+    "dashboard"
+  ],
+  "author": "ThriveAds",
+  "license": "PRIVATE"
+}

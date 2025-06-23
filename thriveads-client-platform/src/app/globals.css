@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+:root {
+  /* ThriveAds Brand Colors - Modern & Luxury */
+  --primary-blue: #0066ff;
+  --primary-dark: #0052cc;
+  --primary-light: #e6f2ff;
+  --accent-purple: #6366f1;
+  --accent-purple-light: #f0f0ff;
+
+  /* Neutral Colors - Clean & Modern */
+  --gray-25: #fcfcfd;
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+  --gray-600: #475569;
+  --gray-700: #334155;
+  --gray-800: #1e293b;
+  --gray-900: #0f172a;
+
+  /* Performance Colors - Refined */
+  --green-50: #f0fdf4;
+  --green-500: #22c55e;
+  --green-600: #16a34a;
+  --red-50: #fef2f2;
+  --red-500: #ef4444;
+  --red-600: #dc2626;
+  --yellow-50: #fffbeb;
+  --yellow-500: #f59e0b;
+  --yellow-600: #d97706;
+
+  /* Luxury Gradients */
+  --gradient-primary: linear-gradient(135deg, var(--primary-blue) 0%, var(--accent-purple) 100%);
+  --gradient-success: linear-gradient(135deg, var(--green-500) 0%, #10b981 100%);
+  --gradient-surface: linear-gradient(135deg, #ffffff 0%, var(--gray-25) 100%);
+
+  /* Shadows - Apple/Vercel inspired */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+  --background: var(--gray-50);
+  --foreground: var(--gray-900);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  font-feature-settings: 'rlig' 1, 'calt' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer components {
+  /* Luxury Metric Cards */
+  .metric-card {
+    @apply bg-white rounded-2xl p-8 border border-gray-200/60 transition-all duration-300 ease-out;
+    background: var(--gradient-surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .metric-card:hover {
+    @apply -translate-y-1 border-gray-300/60;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .metric-value {
+    @apply text-4xl font-bold mb-3;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.02em;
+  }
+
+  .metric-label {
+    @apply text-sm font-semibold text-gray-600 mb-2 uppercase tracking-wider;
+    letter-spacing: 0.05em;
+  }
+
+  .metric-change {
+    @apply flex items-center text-sm font-semibold;
+  }
+
+  .metric-change.positive {
+    @apply text-green-600;
+  }
+
+  .metric-change.negative {
+    @apply text-red-600;
+  }
+
+  /* Luxury Tables */
+  .luxury-table {
+    @apply bg-white rounded-2xl overflow-hidden border border-gray-200/60;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .luxury-table-header {
+    @apply bg-gray-50/80 backdrop-blur-sm;
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+  }
+
+  .luxury-table-row {
+    @apply transition-all duration-200 hover:bg-gray-50/50 border-b border-gray-100/80;
+  }
+
+  .luxury-table-row:last-child {
+    @apply border-b-0;
+  }
+
+  /* Luxury Buttons */
+  .btn-primary {
+    @apply px-6 py-3 rounded-xl font-semibold text-white transition-all duration-200;
+    background: var(--gradient-primary);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .btn-primary:hover {
+    @apply -translate-y-0.5;
+    box-shadow: var(--shadow-md);
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 rounded-lg font-medium text-gray-700 bg-white border border-gray-200 transition-all duration-200;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .btn-secondary:hover {
+    @apply bg-gray-50 border-gray-300 -translate-y-0.5;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Status Badges */
+  .badge-success {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+    background: var(--green-50);
+    color: var(--green-600);
+  }
+
+  .badge-warning {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+    background: var(--yellow-50);
+    color: var(--yellow-600);
+  }
+
+  .badge-error {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+    background: var(--red-50);
+    color: var(--red-600);
+  }
+}
