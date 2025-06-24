@@ -2,18 +2,16 @@
 Database connection and session management
 """
 
-from app.core.database import SessionLocal, engine, Base
+from app.core.database import get_engine, get_session_local, Base, get_db
 
 # Re-export the database components for compatibility
-__all__ = ["SessionLocal", "engine", "Base", "get_db"]
+__all__ = ["get_engine", "get_session_local", "Base", "get_db"]
 
+# For backward compatibility, create lazy properties
+def SessionLocal():
+    """Backward compatibility - returns session factory"""
+    return get_session_local()
 
-def get_db():
-    """
-    Dependency to get database session
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def engine():
+    """Backward compatibility - returns engine"""
+    return get_engine()

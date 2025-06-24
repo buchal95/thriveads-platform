@@ -9,7 +9,7 @@ from typing import Dict, Any
 import time
 from datetime import datetime, timedelta
 
-from app.database.connection import get_db
+from app.core.database import get_db
 from app.core.config import settings
 from app.core.monitoring import get_monitor
 from app.services.meta_service import MetaService
