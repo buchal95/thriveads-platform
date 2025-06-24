@@ -84,24 +84,24 @@ class SchedulerService:
         if self.is_running:
             logger.warning("Scheduler is already running")
             return
-        
+
         # Schedule daily sync at 6:00 AM (after Meta API data is available)
         schedule.every().day.at("06:00").do(
-            self.run_async_job, 
+            self.run_async_job,
             self.sync_yesterday_data_job
         )
-        
+
         # Schedule weekly summary (optional)
         schedule.every().monday.at("07:00").do(
             self.run_async_job,
             self.weekly_summary_job
         )
-        
+
         self.is_running = True
         self.scheduler_thread = threading.Thread(target=self._run_scheduler, daemon=True)
         self.scheduler_thread.start()
-        
-        logger.info("Scheduler started - Daily sync at 6:00 AM")
+
+        logger.info("Scheduler started - Daily sync at 6:00 AM, Weekly summary on Mondays at 7:00 AM")
     
     def stop_scheduler(self):
         """Stop the scheduler"""

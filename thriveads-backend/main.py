@@ -201,9 +201,9 @@ async def sync_yesterday_data():
             campaign_metrics_stored = 0
             ad_metrics_stored = 0
 
-            # Store campaigns and metrics
+            # Store campaigns and metrics (UPSERT - no duplicates)
             for campaign_data in campaigns_data:
-                # Store/update campaign
+                # UPSERT campaign (insert or update)
                 campaign = db.query(Campaign).filter(Campaign.id == campaign_data['campaign_id']).first()
                 if not campaign:
                     campaign = Campaign(
@@ -216,14 +216,16 @@ async def sync_yesterday_data():
                     db.add(campaign)
                     campaigns_stored += 1
                 else:
+                    # Always update campaign info (in case it changed)
                     campaign.name = campaign_data['campaign_name']
                     campaign.status = campaign_data['status']
                     campaign.objective = campaign_data.get('objective')
 
-                # Store campaign metrics for yesterday
+                # UPSERT campaign metrics for yesterday (prevents duplicates)
                 metrics_id = f"{campaign_data['campaign_id']}_{yesterday}"
                 campaign_metrics = db.query(CampaignMetrics).filter(CampaignMetrics.id == metrics_id).first()
                 if not campaign_metrics:
+                    # Create new metrics record
                     campaign_metrics = CampaignMetrics(
                         id=metrics_id,
                         campaign_id=campaign_data['campaign_id'],
@@ -241,7 +243,7 @@ async def sync_yesterday_data():
                     db.add(campaign_metrics)
                     campaign_metrics_stored += 1
                 else:
-                    # Update existing metrics
+                    # Update existing metrics (safe to call multiple times)
                     campaign_metrics.impressions = campaign_data.get('impressions', 0)
                     campaign_metrics.clicks = campaign_data.get('clicks', 0)
                     campaign_metrics.spend = campaign_data.get('spend', 0)
@@ -330,6 +332,138 @@ async def sync_yesterday_data():
         return {
             "status": "error",
             "message": f"Failed to sync yesterday's data: {str(e)}"
+        }
+
+
+@app.post("/sync-2025-data")
+async def sync_2025_historical_data():
+    """Download and store ALL 2025 data (up to yesterday) in database"""
+    try:
+        from datetime import date, timedelta
+        from app.services.meta_service import MetaService
+        from app.core.database import get_session_local
+        from app.models.campaign import Campaign
+        from app.models.ad import Ad
+        from app.models.metrics import CampaignMetrics, AdMetrics
+        from app.models.client import Client
+
+        if not settings.META_ACCESS_TOKEN:
+            return {
+                "status": "error",
+                "message": "META_ACCESS_TOKEN not configured"
+            }
+
+        # Define 2025 date range (up to yesterday)
+        start_date = date(2025, 1, 1)
+        yesterday = date.today() - timedelta(days=1)
+        end_date = min(yesterday, date(2025, 12, 31))  # Don't go beyond yesterday
+
+        if start_date > end_date:
+            return {
+                "status": "error",
+                "message": f"No 2025 data available yet. Start date: {start_date}, End date: {end_date}"
+            }
+
+        meta_service = MetaService()
+
+        # Get database session
+        SessionLocal = get_session_local()
+        db = SessionLocal()
+
+        try:
+            # Ensure client exists
+            client = db.query(Client).filter(Client.id == settings.DEFAULT_CLIENT_ID).first()
+            if not client:
+                client = Client(
+                    id=settings.DEFAULT_CLIENT_ID,
+                    name="Mimilátky - Notie s.r.o.",
+                    currency="CZK",
+                    meta_ad_account_id=settings.DEFAULT_CLIENT_ID
+                )
+                db.add(client)
+                db.commit()
+
+            # Get ALL 2025 campaigns data (up to yesterday)
+            campaigns_data = await meta_service.get_campaigns_with_metrics(
+                client_id=settings.DEFAULT_CLIENT_ID,
+                start_date=start_date,
+                end_date=end_date
+            )
+
+            # Get ALL 2025 ads data (up to yesterday)
+            ads_data = await meta_service.get_ads_with_metrics(
+                client_id=settings.DEFAULT_CLIENT_ID,
+                start_date=start_date,
+                end_date=end_date
+            )
+
+            campaigns_stored = 0
+            ads_stored = 0
+
+            # Store campaigns (no duplicates)
+            for campaign_data in campaigns_data:
+                campaign = db.query(Campaign).filter(Campaign.id == campaign_data['campaign_id']).first()
+                if not campaign:
+                    campaign = Campaign(
+                        id=campaign_data['campaign_id'],
+                        name=campaign_data['campaign_name'],
+                        status=campaign_data['status'],
+                        objective=campaign_data.get('objective'),
+                        client_id=settings.DEFAULT_CLIENT_ID
+                    )
+                    db.add(campaign)
+                    campaigns_stored += 1
+                else:
+                    # Update campaign info
+                    campaign.name = campaign_data['campaign_name']
+                    campaign.status = campaign_data['status']
+                    campaign.objective = campaign_data.get('objective')
+
+            # Store ads (no duplicates)
+            for ad_data in ads_data:
+                ad = db.query(Ad).filter(Ad.id == ad_data['ad_id']).first()
+                if not ad:
+                    ad = Ad(
+                        id=ad_data['ad_id'],
+                        name=ad_data['ad_name'],
+                        status=ad_data['status'],
+                        campaign_id=ad_data['campaign_id'],
+                        client_id=settings.DEFAULT_CLIENT_ID
+                    )
+                    db.add(ad)
+                    ads_stored += 1
+                else:
+                    # Update ad info
+                    ad.name = ad_data['ad_name']
+                    ad.status = ad_data['status']
+
+            # Commit all changes
+            db.commit()
+
+            return {
+                "status": "success",
+                "message": f"Successfully synced ALL 2025 data from {start_date} to {end_date}",
+                "date_range": {
+                    "start_date": str(start_date),
+                    "end_date": str(end_date),
+                    "days_covered": (end_date - start_date).days + 1
+                },
+                "stored_in_database": {
+                    "campaigns_stored": campaigns_stored,
+                    "ads_stored": ads_stored,
+                    "total_campaigns": len(campaigns_data),
+                    "total_ads": len(ads_data)
+                },
+                "note": "Metrics are aggregated by Meta API for the entire period. Daily sync will add daily breakdowns."
+            }
+
+        finally:
+            db.close()
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to sync 2025 data: {str(e)}"
         }
 
 
