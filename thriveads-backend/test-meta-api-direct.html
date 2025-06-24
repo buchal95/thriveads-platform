@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Meta API Test (No Backend)</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #1e293b;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            background: #dcfce7;
+            border: 1px solid #16a34a;
+            color: #15803d;
+        }
+        .error {
+            background: #fef2f2;
+            border: 1px solid #dc2626;
+            color: #dc2626;
+        }
+        .loading {
+            background: #fef3c7;
+            border: 1px solid #d97706;
+            color: #92400e;
+        }
+        .info {
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            color: #1d4ed8;
+        }
+        .timing {
+            font-weight: bold;
+            color: #059669;
+        }
+        .config {
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .config input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Direct Meta API Test (Frontend Only)</h1>
+        <p>This test bypasses the backend entirely and calls Meta API directly from the browser using CORS.</p>
+        
+        <div class="config">
+            <h3>Configuration</h3>
+            <input type="text" id="accessToken" placeholder="Meta Access Token" value="">
+            <input type="text" id="adAccountId" placeholder="Ad Account ID" value="513010266454814">
+            <small>Note: This requires a Meta access token with proper CORS settings</small>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test 1: Simple Campaign Count</h3>
+            <p>Get basic campaign count to test API connectivity</p>
+            <button onclick="testSimpleCampaigns()">Test Simple Campaigns</button>
+            <div id="result1" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Test 2: Campaigns with Insights (No Filtering)</h3>
+            <p>Get campaigns with insights for last 30 days without any filtering</p>
+            <button onclick="testCampaignsWithInsights()">Test Campaigns + Insights</button>
+            <div id="result2" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>⚡ Test 3: Insights API Direct</h3>
+            <p>Use insights API directly at campaign level</p>
+            <button onclick="testInsightsDirectly()">Test Direct Insights</button>
+            <div id="result3" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Test 4: Account Info</h3>
+            <p>Get basic account information</p>
+            <button onclick="testAccountInfo()">Test Account Info</button>
+            <div id="result4" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'https://graph.facebook.com/v23.0';
+        
+        function getConfig() {
+            const accessToken = document.getElementById('accessToken').value;
+            const adAccountId = document.getElementById('adAccountId').value;
+            
+            if (!accessToken) {
+                alert('Please enter your Meta Access Token');
+                return null;
+            }
+            
+            return { accessToken, adAccountId };
+        }
+
+        function showResult(elementId, content, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${type}`;
+            element.textContent = content;
+        }
+
+        function formatTime(ms) {
+            return `${ms}ms`;
+        }
+
+        async function testSimpleCampaigns() {
+            const config = getConfig();
+            if (!config) return;
+
+            const startTime = Date.now();
+            showResult('result1', 'Loading campaigns...', 'loading');
+
+            try {
+                const url = `${BASE_URL}/act_${config.adAccountId}/campaigns?fields=id,name,status&access_token=${config.accessToken}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                if (data.error) {
+                    showResult('result1', `Error: ${data.error.message}\nCode: ${data.error.code}`, 'error');
+                } else {
+                    const result = `✅ Success! Found ${data.data.length} campaigns
+Time: ${formatTime(duration)}
+
+Sample campaigns:
+${data.data.slice(0, 5).map(c => `- ${c.name} (${c.status})`).join('\n')}
+
+Full response:
+${JSON.stringify(data, null, 2)}`;
+                    showResult('result1', result, 'success');
+                }
+            } catch (error) {
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                showResult('result1', `❌ Network Error: ${error.message}\nTime: ${formatTime(duration)}`, 'error');
+            }
+        }
+
+        async function testCampaignsWithInsights() {
+            const config = getConfig();
+            if (!config) return;
+
+            const startTime = Date.now();
+            showResult('result2', 'Loading campaigns with insights...', 'loading');
+
+            try {
+                // Get date range (last 30 days)
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - 30);
+                
+                const since = startDate.toISOString().split('T')[0];
+                const until = endDate.toISOString().split('T')[0];
+
+                const url = `${BASE_URL}/act_${config.adAccountId}/campaigns?fields=id,name,status,insights{spend,impressions,clicks}&time_range={'since':'${since}','until':'${until}'}&access_token=${config.accessToken}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                if (data.error) {
+                    showResult('result2', `Error: ${data.error.message}\nCode: ${data.error.code}`, 'error');
+                } else {
+                    const campaignsWithSpend = data.data.filter(c => 
+                        c.insights && c.insights.data.length > 0 && 
+                        parseFloat(c.insights.data[0].spend || 0) > 0
+                    );
+
+                    const result = `✅ Success! Found ${data.data.length} total campaigns, ${campaignsWithSpend.length} with spend
+Time: ${formatTime(duration)}
+
+Campaigns with spend:
+${campaignsWithSpend.slice(0, 5).map(c => {
+    const insight = c.insights.data[0];
+    return `- ${c.name}: $${insight.spend} spend, ${insight.impressions} impressions`;
+}).join('\n')}
+
+Full response (first 3 campaigns):
+${JSON.stringify(data.data.slice(0, 3), null, 2)}`;
+                    showResult('result2', result, 'success');
+                }
+            } catch (error) {
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                showResult('result2', `❌ Network Error: ${error.message}\nTime: ${formatTime(duration)}`, 'error');
+            }
+        }
+
+        async function testInsightsDirectly() {
+            const config = getConfig();
+            if (!config) return;
+
+            const startTime = Date.now();
+            showResult('result3', 'Loading insights directly...', 'loading');
+
+            try {
+                // Get date range (last 30 days)
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - 30);
+                
+                const since = startDate.toISOString().split('T')[0];
+                const until = endDate.toISOString().split('T')[0];
+
+                const url = `${BASE_URL}/act_${config.adAccountId}/insights?fields=campaign_id,campaign_name,spend,impressions,clicks&time_range={'since':'${since}','until':'${until}'}&level=campaign&limit=20&access_token=${config.accessToken}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                if (data.error) {
+                    showResult('result3', `Error: ${data.error.message}\nCode: ${data.error.code}`, 'error');
+                } else {
+                    const insightsWithSpend = data.data.filter(insight => parseFloat(insight.spend || 0) > 0);
+
+                    const result = `✅ Success! Found ${data.data.length} total insights, ${insightsWithSpend.length} with spend
+Time: ${formatTime(duration)}
+
+Insights with spend:
+${insightsWithSpend.slice(0, 5).map(insight => 
+    `- ${insight.campaign_name}: $${insight.spend} spend, ${insight.impressions} impressions`
+).join('\n')}
+
+Full response:
+${JSON.stringify(data, null, 2)}`;
+                    showResult('result3', result, 'success');
+                }
+            } catch (error) {
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                showResult('result3', `❌ Network Error: ${error.message}\nTime: ${formatTime(duration)}`, 'error');
+            }
+        }
+
+        async function testAccountInfo() {
+            const config = getConfig();
+            if (!config) return;
+
+            const startTime = Date.now();
+            showResult('result4', 'Loading account info...', 'loading');
+
+            try {
+                const url = `${BASE_URL}/act_${config.adAccountId}?fields=id,name,account_status,currency,timezone_name&access_token=${config.accessToken}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                if (data.error) {
+                    showResult('result4', `Error: ${data.error.message}\nCode: ${data.error.code}`, 'error');
+                } else {
+                    const result = `✅ Success! Account info retrieved
+Time: ${formatTime(duration)}
+
+Account Details:
+- Name: ${data.name}
+- Status: ${data.account_status}
+- Currency: ${data.currency}
+- Timezone: ${data.timezone_name}
+
+Full response:
+${JSON.stringify(data, null, 2)}`;
+                    showResult('result4', result, 'success');
+                }
+            } catch (error) {
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                showResult('result4', `❌ Network Error: ${error.message}\nTime: ${formatTime(duration)}`, 'error');
+            }
+        }
+
+        // Auto-fill access token if available in localStorage
+        window.onload = function() {
+            const savedToken = localStorage.getItem('metaAccessToken');
+            if (savedToken) {
+                document.getElementById('accessToken').value = savedToken;
+            }
+            
+            // Save token when changed
+            document.getElementById('accessToken').addEventListener('change', function() {
+                localStorage.setItem('metaAccessToken', this.value);
+            });
+        };
+    </script>
+</body>
+</html>
