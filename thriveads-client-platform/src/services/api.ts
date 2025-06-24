@@ -79,6 +79,17 @@ export interface WeekComparison {
   };
 }
 
+export interface DailyMetrics {
+  date: string;
+  metrics: CampaignMetrics;
+}
+
+export interface WeeklyMetrics {
+  week_start: string;
+  week_end: string;
+  metrics: CampaignMetrics;
+}
+
 class ApiService {
   private baseUrl: string;
   private clientId: string;
@@ -194,10 +205,20 @@ class ApiService {
     // In the future, the backend could provide a single dashboard endpoint
 
     try {
-      const [campaignsResponse, weekComparisonResponse] = await Promise.all([
+      // Fetch all required data in parallel
+      const promises = [
         this.getTopCampaigns(period, 'default', 20),
         this.getWeekComparison()
-      ]);
+      ];
+
+      // Add breakdown data based on period
+      if (period === 'last_week') {
+        promises.push(this.getDailyBreakdown(period));
+      } else {
+        promises.push(this.getWeeklyBreakdown(4));
+      }
+
+      const [campaignsResponse, weekComparisonResponse, breakdownResponse] = await Promise.all(promises);
 
       if (campaignsResponse.error) {
         return campaignsResponse;
@@ -207,8 +228,13 @@ class ApiService {
         return weekComparisonResponse;
       }
 
+      if (breakdownResponse.error) {
+        return breakdownResponse;
+      }
+
       const campaigns = campaignsResponse.data || [];
       const weekComparison = weekComparisonResponse.data!;
+      const breakdownData = breakdownResponse.data || [];
 
       // Calculate summary metrics from campaigns
       const summary = campaigns.reduce((acc, campaign) => {
@@ -256,7 +282,11 @@ class ApiService {
         },
         summary,
         campaigns,
-        daily_breakdown: [] // Not implemented yet
+        // Include breakdown data based on period
+        ...(period === 'last_week'
+          ? { daily_breakdown: breakdownData as DailyMetrics[] }
+          : { weekly_breakdown: breakdownData as WeeklyMetrics[] }
+        )
       };
 
       return {
@@ -269,6 +299,34 @@ class ApiService {
         status: 500
       };
     }
+  }
+
+  /**
+   * Get daily breakdown data for charts
+   */
+  async getDailyBreakdown(
+    period: 'last_week' | 'last_month' = 'last_week'
+  ): Promise<ApiResponse<DailyMetrics[]>> {
+    const params = new URLSearchParams({
+      client_id: this.clientId,
+      period,
+    });
+
+    return this.makeRequest<DailyMetrics[]>(`/api/v1/metrics/daily-breakdown?${params}`);
+  }
+
+  /**
+   * Get weekly breakdown data for charts
+   */
+  async getWeeklyBreakdown(
+    weeks: number = 4
+  ): Promise<ApiResponse<WeeklyMetrics[]>> {
+    const params = new URLSearchParams({
+      client_id: this.clientId,
+      weeks: weeks.toString(),
+    });
+
+    return this.makeRequest<WeeklyMetrics[]>(`/api/v1/metrics/weekly-breakdown?${params}`);
   }
 
   /**

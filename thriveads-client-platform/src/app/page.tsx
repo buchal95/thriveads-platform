@@ -420,10 +420,13 @@ export default function Dashboard() {
 
         {/* Attribution Comparison */}
         <AttributionComparison
-          purchases={currentData.summary.purchases}
+          purchases={{
+            default: { count: currentData.summary.conversions, value: currentData.summary.conversion_value },
+            '7d_click': { count: currentData.summary.conversions, value: currentData.summary.conversion_value }
+          }}
           spend={currentData.summary.spend}
           roasDefault={currentData.summary.roas}
-          roas7dClick={currentData.summary.roas_7d_click}
+          roas7dClick={currentData.summary.roas}
           className="mb-8"
         />
 

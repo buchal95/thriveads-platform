@@ -93,6 +93,79 @@ async def get_week_on_week_comparison(
         )
 
         return comparison_data
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching week-on-week data: {str(e)}")
+
+
+@router.get("/daily-breakdown")
+async def get_daily_breakdown(
+    client_id: str = Query(..., description="Client Meta ad account ID"),
+    period: str = Query("last_week", description="Time period: last_week, last_month"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get daily breakdown metrics for charts
+
+    Returns daily metrics data for the specified period to power
+    daily trend charts in the frontend.
+    """
+    try:
+        # Calculate date range based on period
+        end_date = datetime.now().date()
+
+        if period == "last_week":
+            # Get last 7 days
+            start_date = end_date - timedelta(days=7)
+        elif period == "last_month":
+            # Get last 30 days
+            start_date = end_date - timedelta(days=30)
+        else:
+            raise HTTPException(status_code=400, detail="Invalid period. Use 'last_week' or 'last_month'")
+
+        # Fetch daily breakdown data from Meta API
+        meta_service = MetaService()
+        daily_data = await meta_service.get_daily_breakdown(
+            client_id=client_id,
+            start_date=start_date,
+            end_date=end_date
+        )
+
+        return daily_data
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching daily breakdown: {str(e)}")
+
+
+@router.get("/weekly-breakdown")
+async def get_weekly_breakdown(
+    client_id: str = Query(..., description="Client Meta ad account ID"),
+    weeks: int = Query(4, description="Number of weeks to fetch (default: 4, max: 12)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get weekly breakdown metrics for charts
+
+    Returns weekly metrics data to power weekly trend charts in the frontend.
+    """
+    try:
+        # Limit weeks to prevent timeouts
+        weeks = min(weeks, 12)
+
+        # Calculate date range (weeks * 7 days)
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(weeks=weeks)
+
+        # Fetch weekly breakdown data from Meta API
+        meta_service = MetaService()
+        weekly_data = await meta_service.get_weekly_breakdown(
+            client_id=client_id,
+            start_date=start_date,
+            end_date=end_date,
+            weeks=weeks
+        )
+
+        return weekly_data
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching weekly breakdown: {str(e)}")

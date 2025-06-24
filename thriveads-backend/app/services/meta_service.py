@@ -1020,3 +1020,185 @@ class MetaService:
             'impressions': impressions,
             'clicks': clicks
         }
+
+    async def get_daily_breakdown(
+        self,
+        client_id: str,
+        start_date: date,
+        end_date: date
+    ) -> List[Dict[str, Any]]:
+        """
+        Get daily breakdown metrics for charts
+
+        Returns daily metrics data for the specified date range
+        """
+        try:
+            # Get ad account
+            ad_account = AdAccount(f"act_{client_id}")
+
+            # Define insights parameters for daily breakdown
+            insights_params = {
+                'time_range': {
+                    'since': start_date.strftime('%Y-%m-%d'),
+                    'until': end_date.strftime('%Y-%m-%d')
+                },
+                'time_increment': 1,  # Daily data
+                'level': 'account',
+                'breakdowns': [],
+            }
+
+            # Define metrics to fetch
+            insights_fields = [
+                'date_start',
+                'impressions',
+                'clicks',
+                'spend',
+                'actions',
+                'action_values',
+                'ctr',
+                'cpc',
+                'cpm',
+                'frequency',
+                'reach',
+                'account_currency'
+            ]
+
+            # Fetch account insights with daily breakdown
+            insights = ad_account.get_insights(
+                fields=insights_fields,
+                params=insights_params
+            )
+
+            daily_breakdown = []
+            for insight in insights:
+                # Extract metrics for this day
+                metrics = self._extract_metrics_from_insight(insight)
+
+                daily_breakdown.append({
+                    'date': insight.get('date_start'),
+                    'metrics': metrics
+                })
+
+            # Sort by date to ensure chronological order
+            daily_breakdown.sort(key=lambda x: x['date'])
+
+            return daily_breakdown
+
+        except Exception as e:
+            logger.error(f"Error fetching daily breakdown: {e}")
+            raise
+
+    async def get_weekly_breakdown(
+        self,
+        client_id: str,
+        start_date: date,
+        end_date: date,
+        weeks: int = 4
+    ) -> List[Dict[str, Any]]:
+        """
+        Get weekly breakdown metrics for charts
+
+        Returns weekly metrics data aggregated from daily data
+        """
+        try:
+            # Get daily data first
+            daily_data = await self.get_daily_breakdown(
+                client_id=client_id,
+                start_date=start_date,
+                end_date=end_date
+            )
+
+            # Group daily data into weeks
+            weekly_breakdown = []
+            current_week_data = []
+            current_week_start = None
+
+            for daily_item in daily_data:
+                item_date = datetime.strptime(daily_item['date'], '%Y-%m-%d').date()
+
+                # Determine week start (Monday)
+                week_start = item_date - timedelta(days=item_date.weekday())
+
+                if current_week_start is None:
+                    current_week_start = week_start
+                    current_week_data = [daily_item]
+                elif week_start == current_week_start:
+                    # Same week, add to current week data
+                    current_week_data.append(daily_item)
+                else:
+                    # New week, process previous week
+                    if current_week_data:
+                        week_metrics = self._aggregate_daily_to_weekly(current_week_data)
+                        weekly_breakdown.append({
+                            'week_start': current_week_start.strftime('%Y-%m-%d'),
+                            'week_end': (current_week_start + timedelta(days=6)).strftime('%Y-%m-%d'),
+                            'metrics': week_metrics
+                        })
+
+                    # Start new week
+                    current_week_start = week_start
+                    current_week_data = [daily_item]
+
+            # Process the last week
+            if current_week_data:
+                week_metrics = self._aggregate_daily_to_weekly(current_week_data)
+                weekly_breakdown.append({
+                    'week_start': current_week_start.strftime('%Y-%m-%d'),
+                    'week_end': (current_week_start + timedelta(days=6)).strftime('%Y-%m-%d'),
+                    'metrics': week_metrics
+                })
+
+            # Limit to requested number of weeks (most recent)
+            weekly_breakdown = weekly_breakdown[-weeks:] if len(weekly_breakdown) > weeks else weekly_breakdown
+
+            return weekly_breakdown
+
+        except Exception as e:
+            logger.error(f"Error fetching weekly breakdown: {e}")
+            raise
+
+    def _aggregate_daily_to_weekly(self, daily_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Aggregate daily metrics into weekly totals"""
+        if not daily_data:
+            return {
+                'spend': 0.0,
+                'impressions': 0,
+                'clicks': 0,
+                'conversions': 0,
+                'conversion_value': 0.0,
+                'ctr': 0.0,
+                'cpc': 0.0,
+                'cpm': 0.0,
+                'roas': 0.0,
+                'frequency': 0.0,
+                'reach': 0
+            }
+
+        # Sum up all metrics
+        total_spend = sum(item['metrics'].get('spend', 0) for item in daily_data)
+        total_impressions = sum(item['metrics'].get('impressions', 0) for item in daily_data)
+        total_clicks = sum(item['metrics'].get('clicks', 0) for item in daily_data)
+        total_conversions = sum(item['metrics'].get('conversions', 0) for item in daily_data)
+        total_conversion_value = sum(item['metrics'].get('conversion_value', 0) for item in daily_data)
+        total_reach = sum(item['metrics'].get('reach', 0) for item in daily_data)
+
+        # Calculate derived metrics
+        ctr = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0.0
+        cpc = (total_spend / total_clicks) if total_clicks > 0 else 0.0
+        cpm = (total_spend / total_impressions * 1000) if total_impressions > 0 else 0.0
+        roas = (total_conversion_value / total_spend) if total_spend > 0 else 0.0
+        frequency = (total_impressions / total_reach) if total_reach > 0 else 0.0
+
+        return {
+            'spend': total_spend,
+            'impressions': total_impressions,
+            'clicks': total_clicks,
+            'conversions': total_conversions,
+            'conversion_value': total_conversion_value,
+            'ctr': ctr,
+            'cpc': cpc,
+            'cpm': cpm,
+            'roas': roas,
+            'frequency': frequency,
+            'reach': total_reach
+        }
