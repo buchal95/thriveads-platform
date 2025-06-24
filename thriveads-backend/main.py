@@ -1524,13 +1524,7 @@ async def test_meta_api_simple():
                 'status': 'active_with_spend'  # These campaigns have recent spend
             })
 
-        campaign_list = []
-        for campaign in campaigns:
-            campaign_list.append({
-                'id': campaign.get('id'),
-                'name': campaign.get('name'),
-                'status': campaign.get('status')
-            })
+
 
         return {
             "status": "success",
