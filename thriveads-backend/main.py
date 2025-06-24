@@ -1295,6 +1295,77 @@ async def test_meta_api_quick():
         }
 
 
+@app.post("/sync-single-day")
+async def sync_single_day():
+    """Sync just ONE day of data (very fast test)"""
+    try:
+        from datetime import date, timedelta
+        from app.services.meta_service import MetaService
+        from app.core.database import get_session_local
+        from app.models.campaign import Campaign
+        from app.models.client import Client
+
+        if not settings.META_ACCESS_TOKEN:
+            return {
+                "status": "error",
+                "message": "META_ACCESS_TOKEN not configured"
+            }
+
+        # Test with just June 20, 2025 (a few days ago)
+        test_date = date(2025, 6, 20)
+
+        meta_service = MetaService()
+        SessionLocal = get_session_local()
+        db = SessionLocal()
+
+        try:
+            # Get campaigns data for just this one day
+            campaigns_data = await meta_service.get_campaigns_with_metrics(
+                client_id=settings.DEFAULT_CLIENT_ID,
+                start_date=test_date,
+                end_date=test_date
+            )
+
+            campaigns_stored = 0
+
+            # Store campaigns (just basic info, no metrics for speed)
+            for campaign_data in campaigns_data:
+                campaign = db.query(Campaign).filter(Campaign.id == campaign_data['campaign_id']).first()
+                if not campaign:
+                    campaign = Campaign(
+                        id=campaign_data['campaign_id'],
+                        name=campaign_data['campaign_name'],
+                        status=campaign_data['status'],
+                        objective=campaign_data.get('objective'),
+                        client_id=settings.DEFAULT_CLIENT_ID
+                    )
+                    db.add(campaign)
+                    campaigns_stored += 1
+                else:
+                    campaign.name = campaign_data['campaign_name']
+                    campaign.status = campaign_data['status']
+
+            db.commit()
+
+            return {
+                "status": "success",
+                "message": f"Successfully synced single day: {test_date}",
+                "test_date": str(test_date),
+                "campaigns_found": len(campaigns_data),
+                "campaigns_stored": campaigns_stored,
+                "note": "This is a quick test - just campaigns, no metrics stored"
+            }
+
+        finally:
+            db.close()
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Single day sync failed: {str(e)}"
+        }
+
+
 if __name__ == "__main__":
     import uvicorn
     import os
