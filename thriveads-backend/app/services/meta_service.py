@@ -52,41 +52,13 @@ class MetaService:
 
             account = AdAccount(f"act_{client_id}")
 
-            # Use insights API to get campaigns with spend instead of filtering campaigns list
-            if active_only:
-                # Get campaigns with spend using insights API (more reliable)
-                insights = account.get_insights(
-                    fields=['campaign_id', 'campaign_name', 'spend'],
-                    params={
-                        'time_range': {
-                            'since': start_date.strftime('%Y-%m-%d'),
-                            'until': end_date.strftime('%Y-%m-%d')
-                        },
-                        'level': 'campaign',
-                        'filtering': [
-                            {
-                                'field': 'spend',
-                                'operator': 'GREATER_THAN',
-                                'value': 0
-                            }
-                        ]
-                    }
-                )
+            # Get all campaigns first, then filter by spend if needed
+            campaigns = account.get_campaigns(
+                fields=['id', 'name', 'status', 'objective']
+            )
 
-                # Convert insights to campaign-like objects
-                campaigns = []
-                for insight in insights:
-                    campaigns.append({
-                        'id': insight.get('campaign_id'),
-                        'name': insight.get('campaign_name'),
-                        'status': 'ACTIVE',  # Campaigns with spend are considered active
-                        'objective': 'CONVERSIONS'  # Default objective
-                    })
-            else:
-                # Get all campaigns (original behavior)
-                campaigns = account.get_campaigns(
-                    fields=['id', 'name', 'status', 'objective']
-                )
+            # If active_only, we'll filter by spend during insights processing
+            # This is more reliable than trying to filter campaigns directly
 
             campaigns_data = []
             for campaign in campaigns:
@@ -121,9 +93,13 @@ class MetaService:
                 }
 
                 # Process insights
+                total_spend = 0
                 for insight in insights:
+                    spend = float(insight.get('spend', 0))
+                    total_spend += spend
+
                     campaign_data.update({
-                        'spend': float(insight.get('spend', 0)),
+                        'spend': spend,
                         'impressions': int(insight.get('impressions', 0)),
                         'clicks': int(insight.get('clicks', 0)),
                         'cpm': float(insight.get('cpm', 0)),
@@ -138,7 +114,9 @@ class MetaService:
                                     if action['action_type'] in ['purchase', 'complete_registration'])
                     campaign_data['conversions'] = conversions
 
-                campaigns_data.append(campaign_data)
+                # Only include campaigns with spend > 0 if active_only is True
+                if not active_only or total_spend > 0:
+                    campaigns_data.append(campaign_data)
 
             return campaigns_data
 
@@ -166,41 +144,13 @@ class MetaService:
 
             account = AdAccount(f"act_{client_id}")
 
-            # Use insights API to get ads with spend instead of filtering ads list
-            if active_only:
-                # Get ads with spend using insights API (more reliable)
-                insights = account.get_insights(
-                    fields=['ad_id', 'ad_name', 'campaign_id', 'spend'],
-                    params={
-                        'time_range': {
-                            'since': start_date.strftime('%Y-%m-%d'),
-                            'until': end_date.strftime('%Y-%m-%d')
-                        },
-                        'level': 'ad',
-                        'filtering': [
-                            {
-                                'field': 'spend',
-                                'operator': 'GREATER_THAN',
-                                'value': 0
-                            }
-                        ]
-                    }
-                )
+            # Get all ads first, then filter by spend if needed
+            ads = account.get_ads(
+                fields=['id', 'name', 'status', 'campaign_id']
+            )
 
-                # Convert insights to ad-like objects
-                ads = []
-                for insight in insights:
-                    ads.append({
-                        'id': insight.get('ad_id'),
-                        'name': insight.get('ad_name'),
-                        'status': 'ACTIVE',  # Ads with spend are considered active
-                        'campaign_id': insight.get('campaign_id')
-                    })
-            else:
-                # Get all ads (original behavior)
-                ads = account.get_ads(
-                    fields=['id', 'name', 'status', 'campaign_id']
-                )
+            # If active_only, we'll filter by spend during insights processing
+            # This is more reliable than trying to filter ads directly
 
             ads_data = []
             for ad in ads:
@@ -245,9 +195,13 @@ class MetaService:
                 }
 
                 # Process insights
+                total_spend = 0
                 for insight in insights:
+                    spend = float(insight.get('spend', 0))
+                    total_spend += spend
+
                     ad_data.update({
-                        'spend': float(insight.get('spend', 0)),
+                        'spend': spend,
                         'impressions': int(insight.get('impressions', 0)),
                         'clicks': int(insight.get('clicks', 0)),
                         'cpm': float(insight.get('cpm', 0)),
@@ -269,7 +223,9 @@ class MetaService:
                     ad_data['conversions'] = conversions
                     ad_data['link_clicks'] = link_clicks
 
-                ads_data.append(ad_data)
+                # Only include ads with spend > 0 if active_only is True
+                if not active_only or total_spend > 0:
+                    ads_data.append(ad_data)
 
             return ads_data
 

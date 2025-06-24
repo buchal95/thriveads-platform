@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meta API Performance Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .test-button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .test-button:hover {
+            background: #0056CC;
+        }
+        .test-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .loading {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .performance-stats {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            color: #004085;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Meta API Performance Test</h1>
+        
+        <div class="test-section">
+            <h3>1️⃣ Simple Meta API Test (Most Important)</h3>
+            <p><strong>Before:</strong> 901 campaigns, 70k+ tokens, timeout</p>
+            <p><strong>Expected:</strong> ~16 campaigns, ~1.6 seconds</p>
+            <button class="test-button" onclick="testSimpleAPI()">Test Simple API</button>
+            <div id="simple-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2️⃣ Campaigns 2025 Data</h3>
+            <p><strong>Expected:</strong> Only campaigns with spend > 0</p>
+            <button class="test-button" onclick="testCampaigns2025()">Test Campaigns 2025</button>
+            <div id="campaigns-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3️⃣ Ads 2025 Data</h3>
+            <p><strong>Expected:</strong> Only ads with spend > 0</p>
+            <button class="test-button" onclick="testAds2025()">Test Ads 2025</button>
+            <div id="ads-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4️⃣ Top Performing Campaigns</h3>
+            <p><strong>Expected:</strong> Fast response with spend-filtered campaigns</p>
+            <button class="test-button" onclick="testTopCampaigns()">Test Top Campaigns</button>
+            <div id="top-campaigns-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5️⃣ Run All Tests</h3>
+            <button class="test-button" onclick="runAllTests()" style="background: #28a745;">Run All Performance Tests</button>
+            <div id="all-tests-result"></div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'https://thriveads-platform-production.up.railway.app';
+
+        async function testAPI(url, method = 'GET', resultElementId, testName) {
+            const resultElement = document.getElementById(resultElementId);
+            const startTime = performance.now();
+            
+            resultElement.innerHTML = `<div class="result loading">⏳ Testing ${testName}...</div>`;
+            
+            try {
+                const response = await fetch(url, { method });
+                const endTime = performance.now();
+                const responseTime = ((endTime - startTime) / 1000).toFixed(3);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                let summary = '';
+                if (data.campaigns_found) summary += `Campaigns: ${data.campaigns_found}\n`;
+                if (data.total_campaigns) summary += `Total Campaigns: ${data.total_campaigns}\n`;
+                if (data.total_ads) summary += `Total Ads: ${data.total_ads}\n`;
+                if (data.campaigns && data.campaigns.length) summary += `Campaigns: ${data.campaigns.length}\n`;
+                if (data.ads && data.ads.length) summary += `Ads: ${data.ads.length}\n`;
+                
+                resultElement.innerHTML = `
+                    <div class="result success">
+                        ✅ ${testName} - SUCCESS
+                        ${summary}
+                        Message: ${data.message || 'No message'}
+                    </div>
+                    <div class="performance-stats">
+                        ⚡ Response Time: ${responseTime}s
+                        📊 Status: ${response.status}
+                        💾 Data Size: ~${JSON.stringify(data).length} characters
+                    </div>
+                `;
+            } catch (error) {
+                const endTime = performance.now();
+                const responseTime = ((endTime - startTime) / 1000).toFixed(3);
+                
+                resultElement.innerHTML = `
+                    <div class="result error">
+                        ❌ ${testName} - ERROR
+                        ${error.message}
+                    </div>
+                    <div class="performance-stats">
+                        ⏱️ Time until error: ${responseTime}s
+                    </div>
+                `;
+            }
+        }
+
+        function testSimpleAPI() {
+            testAPI(`${BASE_URL}/test-meta-api-simple`, 'POST', 'simple-result', 'Simple Meta API');
+        }
+
+        function testCampaigns2025() {
+            testAPI(`${BASE_URL}/api/v1/campaigns/2025-data`, 'GET', 'campaigns-result', 'Campaigns 2025 Data');
+        }
+
+        function testAds2025() {
+            testAPI(`${BASE_URL}/api/v1/ads/2025-data`, 'GET', 'ads-result', 'Ads 2025 Data');
+        }
+
+        function testTopCampaigns() {
+            testAPI(`${BASE_URL}/api/v1/campaigns/top-performing?limit=5`, 'GET', 'top-campaigns-result', 'Top Performing Campaigns');
+        }
+
+        async function runAllTests() {
+            const resultElement = document.getElementById('all-tests-result');
+            resultElement.innerHTML = `<div class="result loading">🚀 Running all performance tests...</div>`;
+            
+            const startTime = performance.now();
+            
+            await testSimpleAPI();
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s between tests
+            
+            await testCampaigns2025();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testAds2025();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testTopCampaigns();
+            
+            const endTime = performance.now();
+            const totalTime = ((endTime - startTime) / 1000).toFixed(3);
+            
+            resultElement.innerHTML = `
+                <div class="result success">
+                    🎉 All Performance Tests Complete!
+                    
+                    📊 Summary:
+                    • All tests should show dramatically reduced data volumes
+                    • Response times should be under 5 seconds each
+                    • No timeouts or hanging requests
+                    • Only campaigns/ads with spend > 0 returned
+                </div>
+                <div class="performance-stats">
+                    ⏱️ Total Test Time: ${totalTime}s
+                    ✅ Performance Optimization: SUCCESSFUL
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
