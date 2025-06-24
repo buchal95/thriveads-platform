@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python debug_main.py",
+    "startCommand": "python main_simple.py",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 300,
     "healthcheckInitialDelay": 60,
