@@ -335,6 +335,76 @@ async def sync_yesterday_data():
         }
 
 
+@app.post("/sync-2025-data-quick")
+async def sync_2025_quick():
+    """Quick 2025 sync - just first 3 days for testing"""
+    try:
+        from datetime import date, timedelta
+        from app.services.meta_service import MetaService
+        from app.core.database import get_session_local
+        from app.models.campaign import Campaign
+        from app.models.ad import Ad
+        from app.models.metrics import CampaignMetrics, AdMetrics
+        from app.models.client import Client
+
+        if not settings.META_ACCESS_TOKEN:
+            return {
+                "status": "error",
+                "message": "META_ACCESS_TOKEN not configured"
+            }
+
+        # Test with just first 3 days of 2025
+        start_date = date(2025, 1, 1)
+        end_date = date(2025, 1, 3)  # Just 3 days for testing
+
+        meta_service = MetaService()
+        SessionLocal = get_session_local()
+        db = SessionLocal()
+
+        try:
+            # Ensure client exists
+            client = db.query(Client).filter(Client.id == settings.DEFAULT_CLIENT_ID).first()
+            if not client:
+                client = Client(
+                    id=settings.DEFAULT_CLIENT_ID,
+                    name="Mimilátky - Notie s.r.o.",
+                    currency="CZK",
+                    meta_ad_account_id=settings.DEFAULT_CLIENT_ID
+                )
+                db.add(client)
+                db.commit()
+
+            days_processed = 0
+            current_date = start_date
+
+            while current_date <= end_date:
+                # Get data for this day
+                campaigns_data = await meta_service.get_campaigns_with_metrics(
+                    client_id=settings.DEFAULT_CLIENT_ID,
+                    start_date=current_date,
+                    end_date=current_date
+                )
+
+                days_processed += 1
+                current_date += timedelta(days=1)
+                db.commit()
+
+            return {
+                "status": "success",
+                "message": f"Quick test completed - {days_processed} days processed",
+                "note": "This is a quick test. Use /sync-yesterday for daily sync."
+            }
+
+        finally:
+            db.close()
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Quick test failed: {str(e)}"
+        }
+
+
 @app.post("/sync-2025-data")
 async def sync_2025_historical_data():
     """Download and store ALL 2025 data DAY-BY-DAY (up to yesterday) in database"""
@@ -693,6 +763,23 @@ async def get_database_status():
             "message": f"Database connection failed: {str(e)}",
             "database_ready": False
         }
+
+
+@app.get("/debug-env")
+async def debug_environment():
+    """Debug environment variables (for troubleshooting)"""
+    import os
+
+    return {
+        "environment_variables": {
+            "DATABASE_URL": "SET" if os.getenv("DATABASE_URL") else "NOT SET",
+            "DATABASE_URL_length": len(os.getenv("DATABASE_URL", "")),
+            "META_ACCESS_TOKEN": "SET" if os.getenv("META_ACCESS_TOKEN") else "NOT SET",
+            "DEFAULT_CLIENT_ID": os.getenv("DEFAULT_CLIENT_ID", "NOT SET"),
+            "ENVIRONMENT": os.getenv("ENVIRONMENT", "NOT SET")
+        },
+        "database_url_preview": os.getenv("DATABASE_URL", "")[:50] + "..." if os.getenv("DATABASE_URL") else "NOT SET"
+    }
 
 
 if __name__ == "__main__":
