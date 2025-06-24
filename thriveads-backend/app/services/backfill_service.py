@@ -284,8 +284,6 @@ class BackfillService:
             cpc=ad_data.get('cpc', 0),
             ctr=ad_data.get('ctr', 0),
             frequency=ad_data.get('frequency', 0),
-            video_views=ad_data.get('video_views', 0),
-            video_view_rate=ad_data.get('video_view_rate', 0),
             reach=ad_data.get('reach', 0)
         )
         db.add(metrics)

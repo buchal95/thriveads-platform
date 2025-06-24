@@ -186,8 +186,7 @@ class MetaService:
                 fields = [
                     'ad_id', 'ad_name', 'status', 'campaign_id', 'campaign_name',
                     'spend', 'impressions', 'clicks', 'conversions', 'link_clicks',
-                    'cost_per_result', 'cpm', 'cpc', 'ctr', 'frequency',
-                    'video_views', 'video_view_rate', 'reach'
+                    'cost_per_result', 'cpm', 'cpc', 'ctr', 'frequency', 'reach'
                 ]
 
             account = AdAccount(f"act_{client_id}")
@@ -199,7 +198,7 @@ class MetaService:
                     fields=[
                         'ad_id', 'ad_name', 'campaign_id', 'campaign_name', 'spend',
                         'impressions', 'clicks', 'actions', 'cpm', 'cpc', 'ctr',
-                        'frequency', 'video_views', 'video_view_rate', 'reach'
+                        'frequency', 'reach'
                     ],
                     params={
                         'time_range': {
@@ -239,8 +238,6 @@ class MetaService:
                             'cpc': float(insight.get('cpc', 0)),
                             'ctr': float(insight.get('ctr', 0)),
                             'frequency': float(insight.get('frequency', 0)),
-                            'video_views': int(insight.get('video_views', 0)),
-                            'video_view_rate': float(insight.get('video_view_rate', 0)),
                             'reach': int(insight.get('reach', 0))
                         }
                         ads_data.append(ad_data)
@@ -266,8 +263,7 @@ class MetaService:
                 insights = ad.get_insights(
                     fields=[
                         'spend', 'impressions', 'clicks', 'actions',
-                        'cost_per_action_type', 'cpm', 'cpc', 'ctr', 'frequency',
-                        'video_views', 'video_view_rate', 'reach'
+                        'cost_per_action_type', 'cpm', 'cpc', 'ctr', 'frequency', 'reach'
                     ],
                     params={
                         'time_range': {
@@ -293,8 +289,6 @@ class MetaService:
                     'cpc': 0,
                     'ctr': 0,
                     'frequency': 0,
-                    'video_views': 0,
-                    'video_view_rate': 0,
                     'reach': 0
                 }
 
@@ -312,8 +306,6 @@ class MetaService:
                         'cpc': float(insight.get('cpc', 0)),
                         'ctr': float(insight.get('ctr', 0)),
                         'frequency': float(insight.get('frequency', 0)),
-                        'video_views': int(insight.get('video_views', 0)),
-                        'video_view_rate': float(insight.get('video_view_rate', 0)),
                         'reach': int(insight.get('reach', 0))
                     })
 
