@@ -15,6 +15,50 @@ from app.services.ad_service import AdService
 router = APIRouter()
 
 
+@router.get("/2025-data")
+async def get_2025_ads_data(
+    client_id: str = Query("513010266454814", description="Client Meta ad account ID"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all ads data for 2025 for Mimilátky CZ
+    """
+    try:
+        meta_service = MetaService()
+
+        # Get 2025 data (January 1 to December 31, 2025)
+        start_date = datetime(2025, 1, 1).date()
+        end_date = datetime(2025, 12, 31).date()
+
+        # Fetch ads data from Meta API for 2025
+        ads_2025 = await meta_service.get_ads_with_metrics(
+            client_id=client_id,
+            start_date=start_date,
+            end_date=end_date,
+            fields=[
+                'ad_id', 'ad_name', 'status', 'campaign_id', 'campaign_name',
+                'spend', 'impressions', 'clicks', 'conversions', 'link_clicks',
+                'cost_per_result', 'cpm', 'cpc', 'ctr', 'frequency',
+                'video_views', 'video_view_rate', 'reach'
+            ]
+        )
+
+        return {
+            "status": "success",
+            "period": "2025",
+            "client_id": client_id,
+            "date_range": {
+                "start_date": str(start_date),
+                "end_date": str(end_date)
+            },
+            "total_ads": len(ads_2025),
+            "ads": ads_2025
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching 2025 ads data: {str(e)}")
+
+
 @router.get("/top-performing", response_model=List[AdPerformance])
 async def get_top_performing_ads(
     client_id: str = Query(..., description="Client Meta ad account ID"),

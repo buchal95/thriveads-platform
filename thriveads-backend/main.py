@@ -97,6 +97,54 @@ async def health_check():
     }
 
 
+@app.get("/test-meta-api")
+async def test_meta_api():
+    """Test Meta API connection"""
+    try:
+        from app.services.meta_service import MetaService
+
+        if not settings.META_ACCESS_TOKEN:
+            return {
+                "status": "error",
+                "message": "META_ACCESS_TOKEN not configured",
+                "instructions": "Please set META_ACCESS_TOKEN in Railway environment variables"
+            }
+
+        meta_service = MetaService()
+
+        # Test basic API connection by getting account info
+        from facebook_business.api import FacebookAdsApi
+        from facebook_business.adobjects.adaccount import AdAccount
+
+        FacebookAdsApi.init(
+            access_token=settings.META_ACCESS_TOKEN,
+            api_version=settings.META_API_VERSION
+        )
+
+        account = AdAccount(f"act_{settings.DEFAULT_CLIENT_ID}")
+        account_info = account.api_get(fields=['name', 'currency', 'account_status'])
+
+        return {
+            "status": "success",
+            "message": "Meta API connection successful",
+            "account_info": {
+                "account_id": settings.DEFAULT_CLIENT_ID,
+                "account_name": account_info.get('name'),
+                "currency": account_info.get('currency'),
+                "account_status": account_info.get('account_status')
+            },
+            "api_version": settings.META_API_VERSION,
+            "ready_for_2025_data": True
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Meta API connection failed: {str(e)}",
+            "instructions": "Please check your META_ACCESS_TOKEN and ensure it has proper permissions"
+        }
+
+
 if __name__ == "__main__":
     import uvicorn
     import os

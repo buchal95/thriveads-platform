@@ -33,6 +33,182 @@ class MetaService:
             api_version=self.api_version
         )
     
+    async def get_campaigns_with_metrics(
+        self,
+        client_id: str,
+        start_date: date,
+        end_date: date,
+        fields: List[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Get all campaigns with metrics for a date range"""
+        try:
+            if fields is None:
+                fields = [
+                    'campaign_id', 'campaign_name', 'status', 'objective',
+                    'spend', 'impressions', 'clicks', 'conversions',
+                    'cost_per_result', 'cpm', 'cpc', 'ctr', 'frequency'
+                ]
+
+            account = AdAccount(f"act_{client_id}")
+
+            # Get campaigns
+            campaigns = account.get_campaigns(fields=['id', 'name', 'status', 'objective'])
+
+            campaigns_data = []
+            for campaign in campaigns:
+                # Get insights for each campaign
+                insights = campaign.get_insights(
+                    fields=[
+                        'spend', 'impressions', 'clicks', 'actions',
+                        'cost_per_action_type', 'cpm', 'cpc', 'ctr', 'frequency'
+                    ],
+                    params={
+                        'time_range': {
+                            'since': start_date.strftime('%Y-%m-%d'),
+                            'until': end_date.strftime('%Y-%m-%d')
+                        }
+                    }
+                )
+
+                campaign_data = {
+                    'campaign_id': campaign['id'],
+                    'campaign_name': campaign['name'],
+                    'status': campaign['status'],
+                    'objective': campaign.get('objective', 'Unknown'),
+                    'spend': 0,
+                    'impressions': 0,
+                    'clicks': 0,
+                    'conversions': 0,
+                    'cost_per_result': 0,
+                    'cpm': 0,
+                    'cpc': 0,
+                    'ctr': 0,
+                    'frequency': 0
+                }
+
+                # Process insights
+                for insight in insights:
+                    campaign_data.update({
+                        'spend': float(insight.get('spend', 0)),
+                        'impressions': int(insight.get('impressions', 0)),
+                        'clicks': int(insight.get('clicks', 0)),
+                        'cpm': float(insight.get('cpm', 0)),
+                        'cpc': float(insight.get('cpc', 0)),
+                        'ctr': float(insight.get('ctr', 0)),
+                        'frequency': float(insight.get('frequency', 0))
+                    })
+
+                    # Extract conversions from actions
+                    actions = insight.get('actions', [])
+                    conversions = sum(int(action['value']) for action in actions
+                                    if action['action_type'] in ['purchase', 'complete_registration'])
+                    campaign_data['conversions'] = conversions
+
+                campaigns_data.append(campaign_data)
+
+            return campaigns_data
+
+        except Exception as e:
+            logger.error(f"Error fetching campaigns with metrics: {e}")
+            raise
+
+    async def get_ads_with_metrics(
+        self,
+        client_id: str,
+        start_date: date,
+        end_date: date,
+        fields: List[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Get all ads with metrics for a date range"""
+        try:
+            if fields is None:
+                fields = [
+                    'ad_id', 'ad_name', 'status', 'campaign_id', 'campaign_name',
+                    'spend', 'impressions', 'clicks', 'conversions', 'link_clicks',
+                    'cost_per_result', 'cpm', 'cpc', 'ctr', 'frequency',
+                    'video_views', 'video_view_rate', 'reach'
+                ]
+
+            account = AdAccount(f"act_{client_id}")
+
+            # Get ads
+            ads = account.get_ads(fields=['id', 'name', 'status', 'campaign_id'])
+
+            ads_data = []
+            for ad in ads:
+                # Get campaign name
+                campaign = Campaign(ad['campaign_id'])
+                campaign_info = campaign.api_get(fields=['name'])
+
+                # Get insights for each ad
+                insights = ad.get_insights(
+                    fields=[
+                        'spend', 'impressions', 'clicks', 'actions',
+                        'cost_per_action_type', 'cpm', 'cpc', 'ctr', 'frequency',
+                        'video_views', 'video_view_rate', 'reach'
+                    ],
+                    params={
+                        'time_range': {
+                            'since': start_date.strftime('%Y-%m-%d'),
+                            'until': end_date.strftime('%Y-%m-%d')
+                        }
+                    }
+                )
+
+                ad_data = {
+                    'ad_id': ad['id'],
+                    'ad_name': ad['name'],
+                    'status': ad['status'],
+                    'campaign_id': ad['campaign_id'],
+                    'campaign_name': campaign_info.get('name', 'Unknown'),
+                    'spend': 0,
+                    'impressions': 0,
+                    'clicks': 0,
+                    'conversions': 0,
+                    'link_clicks': 0,
+                    'cost_per_result': 0,
+                    'cpm': 0,
+                    'cpc': 0,
+                    'ctr': 0,
+                    'frequency': 0,
+                    'video_views': 0,
+                    'video_view_rate': 0,
+                    'reach': 0
+                }
+
+                # Process insights
+                for insight in insights:
+                    ad_data.update({
+                        'spend': float(insight.get('spend', 0)),
+                        'impressions': int(insight.get('impressions', 0)),
+                        'clicks': int(insight.get('clicks', 0)),
+                        'cpm': float(insight.get('cpm', 0)),
+                        'cpc': float(insight.get('cpc', 0)),
+                        'ctr': float(insight.get('ctr', 0)),
+                        'frequency': float(insight.get('frequency', 0)),
+                        'video_views': int(insight.get('video_views', 0)),
+                        'video_view_rate': float(insight.get('video_view_rate', 0)),
+                        'reach': int(insight.get('reach', 0))
+                    })
+
+                    # Extract conversions and link clicks from actions
+                    actions = insight.get('actions', [])
+                    conversions = sum(int(action['value']) for action in actions
+                                    if action['action_type'] in ['purchase', 'complete_registration'])
+                    link_clicks = sum(int(action['value']) for action in actions
+                                    if action['action_type'] == 'link_click')
+
+                    ad_data['conversions'] = conversions
+                    ad_data['link_clicks'] = link_clicks
+
+                ads_data.append(ad_data)
+
+            return ads_data
+
+        except Exception as e:
+            logger.error(f"Error fetching ads with metrics: {e}")
+            raise
+
     async def get_top_performing_ads(
         self,
         client_id: str,
