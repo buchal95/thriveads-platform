@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThriveAds Backfill System Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #1e293b;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            background: #dcfce7;
+            border: 1px solid #16a34a;
+            color: #15803d;
+        }
+        .error {
+            background: #fef2f2;
+            border: 1px solid #dc2626;
+            color: #dc2626;
+        }
+        .loading {
+            background: #fef3c7;
+            border: 1px solid #d97706;
+            color: #92400e;
+        }
+        .info {
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            color: #1d4ed8;
+        }
+        .timing {
+            font-weight: bold;
+            color: #059669;
+        }
+        .progress {
+            background: #f3f4f6;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .progress-bar {
+            background: #e5e7eb;
+            border-radius: 4px;
+            height: 8px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        .progress-fill {
+            background: #10b981;
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 ThriveAds Smart Backfill System</h1>
+        <p>Test and monitor the day-by-day historical data backfill system for Railway Pro.</p>
+
+        <div class="test-section">
+            <h3>🔍 Test 1: API Health Check</h3>
+            <p>Verify basic API connectivity</p>
+            <button onclick="testApiHealth()">Test API Health</button>
+            <div id="result1" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📅 Test 2: Single Day Backfill</h3>
+            <p>Test backfilling data for a single day (yesterday)</p>
+            <button onclick="testSingleDay()">Test Single Day</button>
+            <div id="result2" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🚀 Test 3: Start 2025 Backfill</h3>
+            <p>Start the complete 2025 backfill process (runs in background)</p>
+            <button onclick="start2025Backfill()">Start 2025 Backfill</button>
+            <div id="result3" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test 4: Backfill Status</h3>
+            <p>Check the status of running backfill processes</p>
+            <button onclick="checkBackfillStatus()">Check Status</button>
+            <button onclick="startStatusPolling()">Auto-Refresh Status</button>
+            <button onclick="stopStatusPolling()">Stop Auto-Refresh</button>
+            <div id="result4" class="result" style="display: none;"></div>
+            <div id="progress4" class="progress" style="display: none;">
+                <div class="progress-bar">
+                    <div id="progressFill4" class="progress-fill" style="width: 0%;"></div>
+                </div>
+                <div id="progressText4"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Test 5: Custom Date Range</h3>
+            <p>Test backfill for a custom date range (last 7 days)</p>
+            <button onclick="testCustomRange()">Test Last 7 Days</button>
+            <div id="result5" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'https://thriveads-platform-production.up.railway.app';
+        let statusPollingInterval = null;
+        
+        function showResult(elementId, content, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${type}`;
+            element.textContent = content;
+        }
+
+        function formatTime(ms) {
+            return `${ms}ms`;
+        }
+
+        async function testApiHealth() {
+            const startTime = Date.now();
+            showResult('result1', 'Testing API health...', 'loading');
+
+            try {
+                const response = await fetch(`${BASE_URL}/`);
+                const data = await response.json();
+                
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                if (response.ok) {
+                    const result = `✅ API Health: ${data.status}
+Version: ${data.version}
+Time: ${formatTime(duration)}
+
+Response:
+${JSON.stringify(data, null, 2)}`;
+                    showResult('result1', result, 'success');
+                } else {
+                    showResult('result1', `❌ API Error: ${response.status} ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                showResult('result1', `❌ Network Error: ${error.message}\nTime: ${formatTime(duration)}`, 'error');
+            }
+        }
+
+        async function testSingleDay() {
+            const startTime = Date.now();
+            showResult('result2', 'Testing single day backfill...', 'loading');
+
+            try {
+                // Get yesterday's date
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const dateStr = yesterday.toISOString().split('T')[0];
+
+                const response = await fetch(`${BASE_URL}/api/v1/sync/backfill/single-day?target_date=${dateStr}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                if (response.ok) {
+                    const result = `✅ Single Day Backfill Complete!
+Date: ${dateStr}
+Time: ${formatTime(duration)}
+Status: ${data.result.status}
+Campaigns: ${data.result.campaigns}
+Ads: ${data.result.ads}
+
+Full Response:
+${JSON.stringify(data, null, 2)}`;
+                    showResult('result2', result, 'success');
+                } else {
+                    showResult('result2', `❌ Backfill Error: ${data.detail || response.statusText}`, 'error');
+                }
+            } catch (error) {
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                showResult('result2', `❌ Network Error: ${error.message}\nTime: ${formatTime(duration)}`, 'error');
+            }
+        }
+
+        async function start2025Backfill() {
+            const startTime = Date.now();
+            showResult('result3', 'Starting 2025 backfill process...', 'loading');
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/v1/sync/backfill/2025?delay_seconds=0.5`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                if (response.ok) {
+                    const result = `✅ 2025 Backfill Started!
+Status: ${data.status}
+Time: ${formatTime(duration)}
+Total Days: ${data.date_range.total_days}
+Estimated Duration: ${data.estimated_duration}
+
+Date Range: ${data.date_range.start_date} to ${data.date_range.end_date}
+
+${data.note}
+
+Full Response:
+${JSON.stringify(data, null, 2)}`;
+                    showResult('result3', result, 'success');
+                    
+                    // Auto-start status polling
+                    setTimeout(() => {
+                        startStatusPolling();
+                    }, 2000);
+                } else {
+                    showResult('result3', `❌ Backfill Start Error: ${data.detail || response.statusText}`, 'error');
+                }
+            } catch (error) {
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                showResult('result3', `❌ Network Error: ${error.message}\nTime: ${formatTime(duration)}`, 'error');
+            }
+        }
+
+        async function checkBackfillStatus() {
+            const startTime = Date.now();
+            showResult('result4', 'Checking backfill status...', 'loading');
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/v1/sync/backfill/status`);
+                const data = await response.json();
+                
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                if (response.ok) {
+                    let result = `📊 Backfill Status: ${data.status}
+Time: ${formatTime(duration)}
+
+`;
+
+                    if (data.status === 'not_started') {
+                        result += `No backfill process has been started yet.`;
+                        showResult('result4', result, 'info');
+                        document.getElementById('progress4').style.display = 'none';
+                    } else {
+                        result += `Progress: ${data.progress.completed_days}/${data.progress.total_days} days (${data.progress.percentage}%)
+Current Date: ${data.progress.current_date}
+Elapsed: ${data.timing.elapsed}
+Estimated Remaining: ${data.timing.estimated_remaining || 'Calculating...'}
+Errors: ${data.error_count}
+
+Recent Errors:
+${data.errors.join('\n')}
+
+Full Response:
+${JSON.stringify(data, null, 2)}`;
+                        
+                        const statusType = data.status === 'completed' ? 'success' : 'info';
+                        showResult('result4', result, statusType);
+                        
+                        // Update progress bar
+                        const progressElement = document.getElementById('progress4');
+                        const progressFill = document.getElementById('progressFill4');
+                        const progressText = document.getElementById('progressText4');
+                        
+                        progressElement.style.display = 'block';
+                        progressFill.style.width = `${data.progress.percentage}%`;
+                        progressText.textContent = `${data.progress.completed_days}/${data.progress.total_days} days completed (${data.progress.percentage}%)`;
+                    }
+                } else {
+                    showResult('result4', `❌ Status Error: ${data.detail || response.statusText}`, 'error');
+                    document.getElementById('progress4').style.display = 'none';
+                }
+            } catch (error) {
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                showResult('result4', `❌ Network Error: ${error.message}\nTime: ${formatTime(duration)}`, 'error');
+                document.getElementById('progress4').style.display = 'none';
+            }
+        }
+
+        function startStatusPolling() {
+            if (statusPollingInterval) {
+                clearInterval(statusPollingInterval);
+            }
+            
+            statusPollingInterval = setInterval(checkBackfillStatus, 5000); // Every 5 seconds
+            checkBackfillStatus(); // Check immediately
+        }
+
+        function stopStatusPolling() {
+            if (statusPollingInterval) {
+                clearInterval(statusPollingInterval);
+                statusPollingInterval = null;
+            }
+        }
+
+        async function testCustomRange() {
+            const startTime = Date.now();
+            showResult('result5', 'Testing custom date range backfill...', 'loading');
+
+            try {
+                // Get date range (7 days ago to yesterday)
+                const endDate = new Date();
+                endDate.setDate(endDate.getDate() - 1);
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - 7);
+                
+                const startDateStr = startDate.toISOString().split('T')[0];
+                const endDateStr = endDate.toISOString().split('T')[0];
+
+                const response = await fetch(`${BASE_URL}/api/v1/sync/backfill/custom?start_date=${startDateStr}&end_date=${endDateStr}&delay_seconds=0.2`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                if (response.ok) {
+                    const result = `✅ Custom Range Backfill Started!
+Status: ${data.status}
+Time: ${formatTime(duration)}
+Date Range: ${data.date_range.start_date} to ${data.date_range.end_date}
+Total Days: ${data.date_range.total_days}
+Estimated Duration: ${data.estimated_duration}
+
+Full Response:
+${JSON.stringify(data, null, 2)}`;
+                    showResult('result5', result, 'success');
+                } else {
+                    showResult('result5', `❌ Custom Backfill Error: ${data.detail || response.statusText}`, 'error');
+                }
+            } catch (error) {
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                showResult('result5', `❌ Network Error: ${error.message}\nTime: ${formatTime(duration)}`, 'error');
+            }
+        }
+
+        // Auto-test API health on page load
+        window.onload = function() {
+            testApiHealth();
+        };
+    </script>
+</body>
+</html>
