@@ -230,10 +230,14 @@ class BackfillService:
             impressions=campaign_data.get('impressions', 0),
             clicks=campaign_data.get('clicks', 0),
             conversions=campaign_data.get('conversions', 0),
+            conversion_value=campaign_data.get('conversion_value', 0),
             cpm=campaign_data.get('cpm', 0),
             cpc=campaign_data.get('cpc', 0),
             ctr=campaign_data.get('ctr', 0),
-            frequency=campaign_data.get('frequency', 0)
+            frequency=campaign_data.get('frequency', 0),
+            roas=campaign_data.get('roas', 0),
+            attribution="default",
+            currency="CZK"
         )
         db.add(metrics)
     
@@ -283,12 +287,14 @@ class BackfillService:
             impressions=ad_data.get('impressions', 0),
             clicks=ad_data.get('clicks', 0),
             conversions=ad_data.get('conversions', 0),
-            link_clicks=ad_data.get('link_clicks', 0),
+            conversion_value=ad_data.get('conversion_value', 0),
             cpm=ad_data.get('cpm', 0),
             cpc=ad_data.get('cpc', 0),
             ctr=ad_data.get('ctr', 0),
             frequency=ad_data.get('frequency', 0),
-            reach=ad_data.get('reach', 0)
+            roas=ad_data.get('roas', 0),
+            attribution="default",
+            currency="CZK"
         )
         db.add(metrics)
     
