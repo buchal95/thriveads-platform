@@ -1,7 +1,7 @@
 'use client';
 
 import { PurchaseConversions } from '@/types/meta-ads';
-import { formatCurrency, formatROAS, cn } from '@/lib/utils';
+import { formatCurrency, formatROAS, cn } from '../lib/utils';
 import { Info, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface AttributionComparisonProps {

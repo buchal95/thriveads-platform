@@ -11,7 +11,7 @@ import { CampaignTable } from '@/components/CampaignTable';
 import { AttributionComparison } from '@/components/AttributionComparison';
 import { BestPerformingAds } from '@/components/BestPerformingAds';
 import { WeekComparison } from '@/components/WeekComparison';
-import { formatROAS } from '@/lib/utils';
+import { formatROAS } from '../lib/utils';
 import { apiService } from '@/services/api';
 
 export default function Dashboard() {
