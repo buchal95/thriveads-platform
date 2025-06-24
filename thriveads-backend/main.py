@@ -1250,6 +1250,51 @@ async def debug_environment():
     }
 
 
+@app.get("/test-meta-api-quick")
+async def test_meta_api_quick():
+    """Quick Meta API test - just get account info (no data sync)"""
+    try:
+        from app.services.meta_service import MetaService
+
+        if not settings.META_ACCESS_TOKEN:
+            return {
+                "status": "error",
+                "message": "META_ACCESS_TOKEN not configured"
+            }
+
+        meta_service = MetaService()
+
+        # Just test basic API connection - no data retrieval
+        from facebook_business.api import FacebookAdsApi
+        from facebook_business.adobjects.adaccount import AdAccount
+
+        FacebookAdsApi.init(
+            access_token=settings.META_ACCESS_TOKEN,
+            api_version=settings.META_API_VERSION
+        )
+
+        account = AdAccount(f"act_{settings.DEFAULT_CLIENT_ID}")
+        account_info = account.api_get(fields=['name', 'currency', 'account_status'])
+
+        return {
+            "status": "success",
+            "message": "Meta API quick test successful",
+            "account_info": {
+                "account_id": settings.DEFAULT_CLIENT_ID,
+                "account_name": account_info.get('name'),
+                "currency": account_info.get('currency'),
+                "account_status": account_info.get('account_status')
+            },
+            "note": "This is just an API connection test - no data sync performed"
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Meta API quick test failed: {str(e)}"
+        }
+
+
 if __name__ == "__main__":
     import uvicorn
     import os
