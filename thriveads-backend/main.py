@@ -1441,11 +1441,12 @@ async def test_meta_api_data():
         test_date = date(2025, 6, 20)
         meta_service = MetaService()
 
-        # Get campaigns data (no database operations)
+        # Get campaigns data with spend filtering (no database operations)
         campaigns_data = await meta_service.get_campaigns_with_metrics(
             client_id=settings.DEFAULT_CLIENT_ID,
             start_date=test_date,
-            end_date=test_date
+            end_date=test_date,
+            active_only=True  # Only campaigns with spend > 0
         )
 
         return {

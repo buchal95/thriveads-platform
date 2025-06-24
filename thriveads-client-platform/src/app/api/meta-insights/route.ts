@@ -42,7 +42,7 @@ class MetaAPIService {
         'campaign_id',
         'impressions',
         'reach',
-        'frequency', 
+        'frequency',
         'clicks',
         'ctr',
         'spend',
@@ -57,7 +57,13 @@ class MetaAPIService {
       ].join(','),
       // CRITICAL: Attribution windows for accurate purchase tracking
       action_attribution_windows: ['default', '7d_click'].join(','),
-      limit: '100'
+      limit: '100',
+      // PERFORMANCE: Only get campaigns/ads with spend > 0
+      filtering: JSON.stringify([{
+        field: 'spend',
+        operator: 'GREATER_THAN',
+        value: 0
+      }])
     });
 
     // Add optional breakdowns

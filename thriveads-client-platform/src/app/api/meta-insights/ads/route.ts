@@ -43,7 +43,7 @@ class MetaAdsAPIService {
         'campaign_name',
         'impressions',
         'reach',
-        'frequency', 
+        'frequency',
         'clicks',
         'ctr',
         'spend',
@@ -58,7 +58,13 @@ class MetaAdsAPIService {
       ].join(','),
       // Attribution windows for accurate purchase tracking
       action_attribution_windows: ['default', '7d_click'].join(','),
-      limit: '100'
+      limit: '100',
+      // PERFORMANCE: Only get ads with spend > 0
+      filtering: JSON.stringify([{
+        field: 'spend',
+        operator: 'GREATER_THAN',
+        value: 0
+      }])
     });
 
     console.log('Meta Ads API Request URL:', `${url}?${queryParams.toString()}`);

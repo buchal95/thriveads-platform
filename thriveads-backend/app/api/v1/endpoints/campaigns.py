@@ -28,7 +28,7 @@ async def get_2025_campaigns_data(
         start_date = datetime(2025, 1, 1).date()
         end_date = datetime(2025, 12, 31).date()
 
-        # Fetch campaigns data from Meta API for 2025
+        # Fetch campaigns data from Meta API for 2025 (only campaigns with spend > 0)
         campaigns_2025 = await meta_service.get_campaigns_with_metrics(
             client_id=client_id,
             start_date=start_date,
@@ -37,7 +37,8 @@ async def get_2025_campaigns_data(
                 'campaign_id', 'campaign_name', 'status', 'objective',
                 'spend', 'impressions', 'clicks', 'conversions',
                 'cost_per_result', 'cpm', 'cpc', 'ctr', 'frequency'
-            ]
+            ],
+            active_only=True  # Only campaigns with spend > 0 for better performance
         )
 
         return {

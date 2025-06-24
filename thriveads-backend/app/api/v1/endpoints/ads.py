@@ -30,7 +30,7 @@ async def get_2025_ads_data(
         start_date = datetime(2025, 1, 1).date()
         end_date = datetime(2025, 12, 31).date()
 
-        # Fetch ads data from Meta API for 2025
+        # Fetch ads data from Meta API for 2025 (only ads with spend > 0)
         ads_2025 = await meta_service.get_ads_with_metrics(
             client_id=client_id,
             start_date=start_date,
@@ -40,7 +40,8 @@ async def get_2025_ads_data(
                 'spend', 'impressions', 'clicks', 'conversions', 'link_clicks',
                 'cost_per_result', 'cpm', 'cpc', 'ctr', 'frequency',
                 'video_views', 'video_view_rate', 'reach'
-            ]
+            ],
+            active_only=True  # Only ads with spend > 0 for better performance
         )
 
         return {
