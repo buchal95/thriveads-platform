@@ -220,8 +220,10 @@ class BackfillService:
             )
         ).delete()
         
-        # Create new metrics
+        # Create new metrics with proper ID
+        metrics_id = f"{campaign.id}_{target_date}"
         metrics = CampaignMetrics(
+            id=metrics_id,
             campaign_id=campaign.id,
             date=target_date,
             spend=campaign_data.get('spend', 0),
@@ -271,8 +273,10 @@ class BackfillService:
             )
         ).delete()
         
-        # Create new metrics
+        # Create new metrics with proper ID
+        metrics_id = f"{ad.id}_{target_date}"
         metrics = AdMetrics(
+            id=metrics_id,
             ad_id=ad.id,
             date=target_date,
             spend=ad_data.get('spend', 0),
