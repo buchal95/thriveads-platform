@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import { ExternalLink, Eye, TrendingUp, Award, RefreshCw } from 'lucide-react';
 import { AdData } from '@/types/meta-ads';
 import { formatCurrency, formatROAS, formatNumber, formatCTR, cn } from '@/lib/utils';
+import { apiService, type Ad } from '@/services/api';
 
 interface BestPerformingAdsProps {
   className?: string;
 }
 
 export function BestPerformingAds({ className }: BestPerformingAdsProps) {
-  const [ads, setAds] = useState<AdData[]>([]);
+  const [ads, setAds] = useState<Ad[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAttribution, setShowAttribution] = useState<'default' | '7d_click'>('default');
@@ -19,14 +20,14 @@ export function BestPerformingAds({ className }: BestPerformingAdsProps) {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch('/api/meta-insights/ads?limit=10');
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
+
+      const response = await apiService.getTopAds('last_week', showAttribution, 10);
+
+      if (response.error) {
+        throw new Error(response.error);
       }
-      
-      const data = await response.json();
-      setAds(data.top_performing_ads || []);
+
+      setAds(response.data || []);
     } catch (err) {
       console.error('Failed to fetch top performing ads:', err);
       setError(err instanceof Error ? err.message : 'Failed to load ads');
@@ -37,7 +38,7 @@ export function BestPerformingAds({ className }: BestPerformingAdsProps) {
 
   useEffect(() => {
     fetchTopAds();
-  }, []);
+  }, [showAttribution]);
 
   const openFacebookAd = (facebookUrl: string, adName: string) => {
     window.open(facebookUrl, '_blank', 'noopener,noreferrer');
@@ -196,10 +197,8 @@ export function BestPerformingAds({ className }: BestPerformingAdsProps) {
           </thead>
           <tbody className="bg-white">
             {ads.map((ad, index) => {
-              const roas = showAttribution === 'default' ? ad.metrics.roas : ad.metrics.roas_7d_click;
-              const conversions = showAttribution === 'default'
-                ? ad.metrics.purchases.default.count
-                : ad.metrics.purchases['7d_click'].count;
+              const roas = ad.metrics.roas;
+              const conversions = ad.metrics.conversions;
 
               return (
                 <tr key={ad.id} className="luxury-table-row">
@@ -215,14 +214,14 @@ export function BestPerformingAds({ className }: BestPerformingAdsProps) {
                           {ad.name}
                         </div>
                         <div className="text-sm text-gray-500 truncate">
-                          {ad.adset_name}
+                          ID: {ad.id}
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-8 py-6">
                     <div className="text-sm font-medium text-gray-900 max-w-xs truncate">
-                      {ad.campaign_name}
+                      {ad.name}
                     </div>
                   </td>
                   <td className="px-8 py-6 text-right">
@@ -257,15 +256,19 @@ export function BestPerformingAds({ className }: BestPerformingAdsProps) {
                     </span>
                   </td>
                   <td className="px-8 py-6 text-center">
-                    <button
-                      onClick={() => openFacebookAd(ad.facebook_url, ad.name)}
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-700 bg-blue-50 rounded-xl hover:bg-blue-100 hover:-translate-y-0.5 transition-all duration-200 shadow-sm"
-                      title={`Zobrazit reklamu na Facebooku: ${ad.name}`}
-                    >
-                      <Eye className="w-4 h-4" />
-                      Zobrazit
-                      <ExternalLink className="w-3 h-3" />
-                    </button>
+                    {ad.facebook_url ? (
+                      <button
+                        onClick={() => openFacebookAd(ad.facebook_url!, ad.name)}
+                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-700 bg-blue-50 rounded-xl hover:bg-blue-100 hover:-translate-y-0.5 transition-all duration-200 shadow-sm"
+                        title={`Zobrazit reklamu na Facebooku: ${ad.name}`}
+                      >
+                        <Eye className="w-4 h-4" />
+                        Zobrazit
+                        <ExternalLink className="w-3 h-3" />
+                      </button>
+                    ) : (
+                      <span className="text-sm text-gray-400">Nedostupné</span>
+                    )}
                   </td>
                 </tr>
               );

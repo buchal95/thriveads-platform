@@ -100,6 +100,7 @@ export interface AdData {
     title?: string;
     body?: string;
     image_url?: string;
+    thumbnail_url?: string;
     video_url?: string;
     object_story_spec?: any;
   };

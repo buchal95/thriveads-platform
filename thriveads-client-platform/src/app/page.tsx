@@ -12,6 +12,7 @@ import { AttributionComparison } from '@/components/AttributionComparison';
 import { BestPerformingAds } from '@/components/BestPerformingAds';
 import { WeekComparison } from '@/components/WeekComparison';
 import { formatROAS } from '@/lib/utils';
+import { apiService } from '@/services/api';
 
 export default function Dashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('last_week');
@@ -39,12 +40,13 @@ export default function Dashboard() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/meta-insights?period=${period}`);
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
+      const response = await apiService.getDashboardData(period);
+
+      if (response.error) {
+        throw new Error(response.error);
       }
 
-      const data = await response.json();
+      const data = response.data;
 
       // Transform API response to match our ClientDashboardData structure
       const transformedData: ClientDashboardData = {

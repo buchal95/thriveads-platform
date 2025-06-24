@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Minus, Calendar, RefreshCw } from 'lucide-react';
 import { WeekComparison as WeekComparisonType, MetricChange } from '@/types/meta-ads';
 import { formatCurrency, formatROAS, formatNumber, cn } from '@/lib/utils';
+import { apiService, type WeekComparison as ApiWeekComparison } from '@/services/api';
 
 interface WeekComparisonProps {
   className?: string;
@@ -99,14 +100,37 @@ export function WeekComparison({ className }: WeekComparisonProps) {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch('/api/meta-insights/comparison');
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
+
+      const response = await apiService.getWeekComparison();
+
+      if (response.error) {
+        throw new Error(response.error);
       }
-      
-      const data = await response.json();
-      setComparison(data.comparison);
+
+      // Convert API response to component format
+      const apiData = response.data!;
+      const convertedData: WeekComparisonType = {
+        current_week: {
+          period: apiData.current_week.period,
+          date_range: { since: '', until: '' }, // API doesn't provide this
+          metrics: apiData.current_week.metrics
+        },
+        previous_week: {
+          period: apiData.previous_week.period,
+          date_range: { since: '', until: '' }, // API doesn't provide this
+          metrics: apiData.previous_week.metrics
+        },
+        changes: Object.entries(apiData.changes).reduce((acc, [key, value]) => {
+          acc[key] = {
+            absolute: value.absolute,
+            percentage: value.percentage,
+            trend: value.percentage > 0 ? 'up' : value.percentage < 0 ? 'down' : 'neutral'
+          } as MetricChange;
+          return acc;
+        }, {} as Record<string, MetricChange>)
+      };
+
+      setComparison(convertedData);
     } catch (err) {
       console.error('Failed to fetch week comparison:', err);
       setError(err instanceof Error ? err.message : 'Failed to load comparison');
