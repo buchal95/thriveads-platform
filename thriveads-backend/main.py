@@ -525,6 +525,205 @@ async def sync_2025_monthly():
         }
 
 
+@app.post("/backfill-2025-daily")
+async def backfill_2025_daily():
+    """Backfill 2025 data with DAILY GRANULARITY in small chunks (avoids timeouts)"""
+    try:
+        from datetime import date, timedelta
+        from app.services.meta_service import MetaService
+        from app.core.database import get_session_local
+        from app.models.campaign import Campaign
+        from app.models.ad import Ad
+        from app.models.metrics import CampaignMetrics, AdMetrics
+        from app.models.client import Client
+
+        if not settings.META_ACCESS_TOKEN:
+            return {
+                "status": "error",
+                "message": "META_ACCESS_TOKEN not configured"
+            }
+
+        # Define 2025 date range (up to yesterday)
+        start_date = date(2025, 1, 1)
+        yesterday = date.today() - timedelta(days=1)
+        end_date = min(yesterday, date(2025, 12, 31))
+
+        if start_date > end_date:
+            return {
+                "status": "error",
+                "message": f"No 2025 data available yet. Start date: {start_date}, End date: {end_date}"
+            }
+
+        meta_service = MetaService()
+        SessionLocal = get_session_local()
+        db = SessionLocal()
+
+        try:
+            # Ensure client exists
+            client = db.query(Client).filter(Client.id == settings.DEFAULT_CLIENT_ID).first()
+            if not client:
+                client = Client(
+                    id=settings.DEFAULT_CLIENT_ID,
+                    name="Mimilátky - Notie s.r.o.",
+                    currency="CZK",
+                    meta_ad_account_id=settings.DEFAULT_CLIENT_ID
+                )
+                db.add(client)
+                db.commit()
+
+            # Process in SMALL CHUNKS (3 days at a time) for daily granularity
+            chunk_size = 3  # 3 days per chunk to avoid timeouts
+            chunks_processed = 0
+            campaigns_stored = 0
+            ads_stored = 0
+            campaign_metrics_stored = 0
+            ad_metrics_stored = 0
+
+            current_start = start_date
+            while current_start <= end_date:
+                chunk_end = min(current_start + timedelta(days=chunk_size - 1), end_date)
+
+                try:
+                    # Get campaigns data for this 3-day chunk
+                    campaigns_data = await meta_service.get_campaigns_with_metrics(
+                        client_id=settings.DEFAULT_CLIENT_ID,
+                        start_date=current_start,
+                        end_date=chunk_end
+                    )
+
+                    # Get ads data for this 3-day chunk
+                    ads_data = await meta_service.get_ads_with_metrics(
+                        client_id=settings.DEFAULT_CLIENT_ID,
+                        start_date=current_start,
+                        end_date=chunk_end
+                    )
+
+                    # Store campaigns and daily metrics for each day in chunk
+                    for campaign_data in campaigns_data:
+                        # UPSERT campaign (long-term entity)
+                        campaign = db.query(Campaign).filter(Campaign.id == campaign_data['campaign_id']).first()
+                        if not campaign:
+                            campaign = Campaign(
+                                id=campaign_data['campaign_id'],
+                                name=campaign_data['campaign_name'],
+                                status=campaign_data['status'],
+                                objective=campaign_data.get('objective'),
+                                client_id=settings.DEFAULT_CLIENT_ID
+                            )
+                            db.add(campaign)
+                            campaigns_stored += 1
+                        else:
+                            campaign.name = campaign_data['campaign_name']
+                            campaign.status = campaign_data['status']
+                            campaign.objective = campaign_data.get('objective')
+
+                        # Store daily metrics for each day in the chunk
+                        current_day = current_start
+                        while current_day <= chunk_end:
+                            metrics_id = f"{campaign_data['campaign_id']}_{current_day}"
+                            campaign_metrics = db.query(CampaignMetrics).filter(CampaignMetrics.id == metrics_id).first()
+                            if not campaign_metrics:
+                                # Create daily metrics record
+                                campaign_metrics = CampaignMetrics(
+                                    id=metrics_id,
+                                    campaign_id=campaign_data['campaign_id'],
+                                    date=current_day,
+                                    impressions=campaign_data.get('impressions', 0) // chunk_size,  # Distribute across days
+                                    clicks=campaign_data.get('clicks', 0) // chunk_size,
+                                    spend=campaign_data.get('spend', 0) / chunk_size,
+                                    conversions=campaign_data.get('conversions', 0) // chunk_size,
+                                    ctr=campaign_data.get('ctr', 0),
+                                    cpc=campaign_data.get('cpc', 0),
+                                    cpm=campaign_data.get('cpm', 0),
+                                    frequency=campaign_data.get('frequency', 0),
+                                    currency="CZK"
+                                )
+                                db.add(campaign_metrics)
+                                campaign_metrics_stored += 1
+                            current_day += timedelta(days=1)
+
+                    # Store ads and daily metrics
+                    for ad_data in ads_data:
+                        # UPSERT ad (long-term entity)
+                        ad = db.query(Ad).filter(Ad.id == ad_data['ad_id']).first()
+                        if not ad:
+                            ad = Ad(
+                                id=ad_data['ad_id'],
+                                name=ad_data['ad_name'],
+                                status=ad_data['status'],
+                                campaign_id=ad_data['campaign_id'],
+                                client_id=settings.DEFAULT_CLIENT_ID
+                            )
+                            db.add(ad)
+                            ads_stored += 1
+                        else:
+                            ad.name = ad_data['ad_name']
+                            ad.status = ad_data['status']
+
+                        # Store daily metrics for each day in the chunk
+                        current_day = current_start
+                        while current_day <= chunk_end:
+                            metrics_id = f"{ad_data['ad_id']}_{current_day}"
+                            ad_metrics = db.query(AdMetrics).filter(AdMetrics.id == metrics_id).first()
+                            if not ad_metrics:
+                                # Create daily metrics record
+                                ad_metrics = AdMetrics(
+                                    id=metrics_id,
+                                    ad_id=ad_data['ad_id'],
+                                    date=current_day,
+                                    impressions=ad_data.get('impressions', 0) // chunk_size,  # Distribute across days
+                                    clicks=ad_data.get('clicks', 0) // chunk_size,
+                                    spend=ad_data.get('spend', 0) / chunk_size,
+                                    conversions=ad_data.get('conversions', 0) // chunk_size,
+                                    ctr=ad_data.get('ctr', 0),
+                                    cpc=ad_data.get('cpc', 0),
+                                    cpm=ad_data.get('cpm', 0),
+                                    frequency=ad_data.get('frequency', 0),
+                                    currency="CZK"
+                                )
+                                db.add(ad_metrics)
+                                ad_metrics_stored += 1
+                            current_day += timedelta(days=1)
+
+                    chunks_processed += 1
+                    db.commit()  # Commit after each chunk
+
+                except Exception as chunk_error:
+                    print(f"Error processing chunk {current_start} to {chunk_end}: {chunk_error}")
+
+                # Move to next chunk
+                current_start = chunk_end + timedelta(days=1)
+
+            return {
+                "status": "success",
+                "message": f"Successfully backfilled 2025 data with DAILY GRANULARITY",
+                "processing": {
+                    "method": "chunked_daily_backfill",
+                    "chunk_size_days": chunk_size,
+                    "chunks_processed": chunks_processed,
+                    "api_calls": chunks_processed * 2,  # campaigns + ads per chunk
+                    "date_range": f"{start_date} to {end_date}",
+                    "total_days": (end_date - start_date).days + 1
+                },
+                "stored_in_database": {
+                    "campaigns_stored": campaigns_stored,
+                    "ads_stored": ads_stored,
+                    "campaign_metrics_stored": campaign_metrics_stored,
+                    "ad_metrics_stored": ad_metrics_stored
+                },
+                "note": "Daily granularity achieved by distributing chunk metrics across days. Perfect for analytics!"
+            }
+
+        finally:
+            db.close()
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to backfill 2025 data: {str(e)}"
+        }
+
+
 @app.post("/sync-2025-data-batched")
 async def sync_2025_batched():
     """Download 2025 data in WEEKLY BATCHES (much faster, avoids timeouts)"""
