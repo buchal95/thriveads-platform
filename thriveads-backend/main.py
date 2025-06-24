@@ -337,7 +337,7 @@ async def sync_yesterday_data():
 
 @app.post("/sync-2025-data")
 async def sync_2025_historical_data():
-    """Download and store ALL 2025 data (up to yesterday) in database"""
+    """Download and store ALL 2025 data DAY-BY-DAY (up to yesterday) in database"""
     try:
         from datetime import date, timedelta
         from app.services.meta_service import MetaService
@@ -383,78 +383,160 @@ async def sync_2025_historical_data():
                 db.add(client)
                 db.commit()
 
-            # Get ALL 2025 campaigns data (up to yesterday)
-            campaigns_data = await meta_service.get_campaigns_with_metrics(
-                client_id=settings.DEFAULT_CLIENT_ID,
-                start_date=start_date,
-                end_date=end_date
-            )
-
-            # Get ALL 2025 ads data (up to yesterday)
-            ads_data = await meta_service.get_ads_with_metrics(
-                client_id=settings.DEFAULT_CLIENT_ID,
-                start_date=start_date,
-                end_date=end_date
-            )
-
+            # Sync DAY-BY-DAY for granular data
+            total_days = (end_date - start_date).days + 1
             campaigns_stored = 0
             ads_stored = 0
+            campaign_metrics_stored = 0
+            ad_metrics_stored = 0
+            days_processed = 0
 
-            # Store campaigns (no duplicates)
-            for campaign_data in campaigns_data:
-                campaign = db.query(Campaign).filter(Campaign.id == campaign_data['campaign_id']).first()
-                if not campaign:
-                    campaign = Campaign(
-                        id=campaign_data['campaign_id'],
-                        name=campaign_data['campaign_name'],
-                        status=campaign_data['status'],
-                        objective=campaign_data.get('objective'),
-                        client_id=settings.DEFAULT_CLIENT_ID
+            current_date = start_date
+            while current_date <= end_date:
+                try:
+                    # Get campaigns data for this specific day
+                    campaigns_data = await meta_service.get_campaigns_with_metrics(
+                        client_id=settings.DEFAULT_CLIENT_ID,
+                        start_date=current_date,
+                        end_date=current_date  # Single day only
                     )
-                    db.add(campaign)
-                    campaigns_stored += 1
-                else:
-                    # Update campaign info
-                    campaign.name = campaign_data['campaign_name']
-                    campaign.status = campaign_data['status']
-                    campaign.objective = campaign_data.get('objective')
 
-            # Store ads (no duplicates)
-            for ad_data in ads_data:
-                ad = db.query(Ad).filter(Ad.id == ad_data['ad_id']).first()
-                if not ad:
-                    ad = Ad(
-                        id=ad_data['ad_id'],
-                        name=ad_data['ad_name'],
-                        status=ad_data['status'],
-                        campaign_id=ad_data['campaign_id'],
-                        client_id=settings.DEFAULT_CLIENT_ID
+                    # Get ads data for this specific day
+                    ads_data = await meta_service.get_ads_with_metrics(
+                        client_id=settings.DEFAULT_CLIENT_ID,
+                        start_date=current_date,
+                        end_date=current_date  # Single day only
                     )
-                    db.add(ad)
-                    ads_stored += 1
-                else:
-                    # Update ad info
-                    ad.name = ad_data['ad_name']
-                    ad.status = ad_data['status']
 
-            # Commit all changes
-            db.commit()
+                    # Store campaigns and metrics for this day
+                    for campaign_data in campaigns_data:
+                        # UPSERT campaign (long-term entity)
+                        campaign = db.query(Campaign).filter(Campaign.id == campaign_data['campaign_id']).first()
+                        if not campaign:
+                            campaign = Campaign(
+                                id=campaign_data['campaign_id'],
+                                name=campaign_data['campaign_name'],
+                                status=campaign_data['status'],
+                                objective=campaign_data.get('objective'),
+                                client_id=settings.DEFAULT_CLIENT_ID
+                            )
+                            db.add(campaign)
+                            campaigns_stored += 1
+                        else:
+                            # Update campaign info
+                            campaign.name = campaign_data['campaign_name']
+                            campaign.status = campaign_data['status']
+                            campaign.objective = campaign_data.get('objective')
+
+                        # Store campaign metrics for this specific day
+                        metrics_id = f"{campaign_data['campaign_id']}_{current_date}"
+                        campaign_metrics = db.query(CampaignMetrics).filter(CampaignMetrics.id == metrics_id).first()
+                        if not campaign_metrics:
+                            campaign_metrics = CampaignMetrics(
+                                id=metrics_id,
+                                campaign_id=campaign_data['campaign_id'],
+                                date=current_date,
+                                impressions=campaign_data.get('impressions', 0),
+                                clicks=campaign_data.get('clicks', 0),
+                                spend=campaign_data.get('spend', 0),
+                                conversions=campaign_data.get('conversions', 0),
+                                ctr=campaign_data.get('ctr', 0),
+                                cpc=campaign_data.get('cpc', 0),
+                                cpm=campaign_data.get('cpm', 0),
+                                frequency=campaign_data.get('frequency', 0),
+                                currency="CZK"
+                            )
+                            db.add(campaign_metrics)
+                            campaign_metrics_stored += 1
+                        else:
+                            # Update existing metrics (safe to call multiple times)
+                            campaign_metrics.impressions = campaign_data.get('impressions', 0)
+                            campaign_metrics.clicks = campaign_data.get('clicks', 0)
+                            campaign_metrics.spend = campaign_data.get('spend', 0)
+                            campaign_metrics.conversions = campaign_data.get('conversions', 0)
+                            campaign_metrics.ctr = campaign_data.get('ctr', 0)
+                            campaign_metrics.cpc = campaign_data.get('cpc', 0)
+                            campaign_metrics.cpm = campaign_data.get('cpm', 0)
+                            campaign_metrics.frequency = campaign_data.get('frequency', 0)
+
+                    # Store ads and metrics for this day
+                    for ad_data in ads_data:
+                        # UPSERT ad (long-term entity)
+                        ad = db.query(Ad).filter(Ad.id == ad_data['ad_id']).first()
+                        if not ad:
+                            ad = Ad(
+                                id=ad_data['ad_id'],
+                                name=ad_data['ad_name'],
+                                status=ad_data['status'],
+                                campaign_id=ad_data['campaign_id'],
+                                client_id=settings.DEFAULT_CLIENT_ID
+                            )
+                            db.add(ad)
+                            ads_stored += 1
+                        else:
+                            # Update ad info
+                            ad.name = ad_data['ad_name']
+                            ad.status = ad_data['status']
+
+                        # Store ad metrics for this specific day
+                        metrics_id = f"{ad_data['ad_id']}_{current_date}"
+                        ad_metrics = db.query(AdMetrics).filter(AdMetrics.id == metrics_id).first()
+                        if not ad_metrics:
+                            ad_metrics = AdMetrics(
+                                id=metrics_id,
+                                ad_id=ad_data['ad_id'],
+                                date=current_date,
+                                impressions=ad_data.get('impressions', 0),
+                                clicks=ad_data.get('clicks', 0),
+                                spend=ad_data.get('spend', 0),
+                                conversions=ad_data.get('conversions', 0),
+                                ctr=ad_data.get('ctr', 0),
+                                cpc=ad_data.get('cpc', 0),
+                                cpm=ad_data.get('cpm', 0),
+                                frequency=ad_data.get('frequency', 0),
+                                currency="CZK"
+                            )
+                            db.add(ad_metrics)
+                            ad_metrics_stored += 1
+                        else:
+                            # Update existing metrics (safe to call multiple times)
+                            ad_metrics.impressions = ad_data.get('impressions', 0)
+                            ad_metrics.clicks = ad_data.get('clicks', 0)
+                            ad_metrics.spend = ad_data.get('spend', 0)
+                            ad_metrics.conversions = ad_data.get('conversions', 0)
+                            ad_metrics.ctr = ad_data.get('ctr', 0)
+                            ad_metrics.cpc = ad_data.get('cpc', 0)
+                            ad_metrics.cpm = ad_data.get('cpm', 0)
+                            ad_metrics.frequency = ad_data.get('frequency', 0)
+
+                    days_processed += 1
+
+                    # Commit after each day to avoid losing progress
+                    db.commit()
+
+                except Exception as day_error:
+                    # Log error for this day but continue with next day
+                    print(f"Error syncing {current_date}: {day_error}")
+
+                # Move to next day
+                current_date += timedelta(days=1)
 
             return {
                 "status": "success",
-                "message": f"Successfully synced ALL 2025 data from {start_date} to {end_date}",
+                "message": f"Successfully synced 2025 data DAY-BY-DAY from {start_date} to {end_date}",
                 "date_range": {
                     "start_date": str(start_date),
                     "end_date": str(end_date),
-                    "days_covered": (end_date - start_date).days + 1
+                    "total_days": total_days,
+                    "days_processed": days_processed
                 },
                 "stored_in_database": {
                     "campaigns_stored": campaigns_stored,
                     "ads_stored": ads_stored,
-                    "total_campaigns": len(campaigns_data),
-                    "total_ads": len(ads_data)
+                    "campaign_metrics_stored": campaign_metrics_stored,
+                    "ad_metrics_stored": ad_metrics_stored
                 },
-                "note": "Metrics are aggregated by Meta API for the entire period. Daily sync will add daily breakdowns."
+                "note": "Each day synced individually for granular daily metrics. Safe to run multiple times."
             }
 
         finally:
