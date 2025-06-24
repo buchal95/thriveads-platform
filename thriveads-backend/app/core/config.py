@@ -25,11 +25,8 @@ class Settings(BaseSettings):
     META_APP_ID: str = ""
     META_APP_SECRET: str = ""
     
-    # CORS
-    ALLOWED_ORIGINS: List[str] = [
-        "http://localhost:3000",  # Next.js dev server
-        "https://thriveads-platform.vercel.app",  # Production frontend
-    ]
+    # CORS - Handle both string and list formats
+    ALLOWED_ORIGINS: str = "*"
     
     # Security
     SECRET_KEY: str = "your-secret-key-change-in-production"
@@ -47,6 +44,13 @@ class Settings(BaseSettings):
     DEFAULT_CLIENT_ID: str = "513010266454814"  # Mimilátky CZ
     
     model_config = ConfigDict(env_file=".env", case_sensitive=True)
+
+    @property
+    def get_allowed_origins(self) -> List[str]:
+        """Convert ALLOWED_ORIGINS string to list"""
+        if self.ALLOWED_ORIGINS == "*":
+            return ["*"]
+        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
 
 
 # Create settings instance
