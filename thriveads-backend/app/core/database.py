@@ -25,15 +25,30 @@ def get_database_url():
     logger.info("Database URL configured", url_scheme=db_url.split("://")[0] if "://" in db_url else "unknown")
     return db_url
 
-# Create database engine
-engine = create_engine(
-    get_database_url(),
-    pool_pre_ping=True,
-    pool_recycle=300,
-    pool_size=5,
-    max_overflow=10,
-    echo=settings.ENVIRONMENT == "development"
-)
+# Lazy database engine creation
+_engine = None
+_SessionLocal = None
+
+def get_engine():
+    """Get database engine (created lazily)"""
+    global _engine
+    if _engine is None:
+        _engine = create_engine(
+            get_database_url(),
+            pool_pre_ping=True,
+            pool_recycle=300,
+            pool_size=5,
+            max_overflow=10,
+            echo=settings.ENVIRONMENT == "development"
+        )
+    return _engine
+
+def get_session_local():
+    """Get session factory (created lazily)"""
+    global _SessionLocal
+    if _SessionLocal is None:
+        _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=get_engine())
+    return _SessionLocal
 
 # Create async engine for async operations (only if needed)
 def get_async_engine():
@@ -42,9 +57,6 @@ def get_async_engine():
         pool_pre_ping=True,
         pool_recycle=300,
     )
-
-# Create session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_async_session_local():
     async_engine = get_async_engine()
@@ -56,6 +68,7 @@ Base = declarative_base()
 
 def get_db():
     """Dependency to get database session"""
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         yield db
@@ -75,12 +88,11 @@ async def init_db():
     try:
         # Import all models to ensure they are registered
         from app.models import client, campaign, ad, metrics
-        
-        # Create tables
-        async_engine = get_async_engine()
-        async with async_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        
+
+        # Create tables using sync engine for simplicity
+        engine = get_engine()
+        Base.metadata.create_all(bind=engine)
+
         logger.info("Database initialized successfully")
     except Exception as e:
         logger.error("Failed to initialize database", error=str(e))
