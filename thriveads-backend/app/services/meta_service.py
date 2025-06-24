@@ -168,8 +168,22 @@ class MetaService:
                 frequency=frequency
             )
 
-            # Generate Facebook URL (simplified - would need actual post ID in production)
-            facebook_url = f"https://www.facebook.com/ads/manager/reporting/view?act={insight.get('account_id', '')}&selected_report_id={ad_id}"
+            # Generate Facebook URL for ads manager
+            facebook_url = f"https://www.facebook.com/ads/manager/reporting/view?act={client_id}&selected_report_id={ad_id}"
+
+            # Try to get preview URL from creative
+            preview_url = None
+            try:
+                ad = Ad(ad_id)
+                ad_data = ad.api_get(fields=['creative'])
+                if ad_data.get('creative'):
+                    creative_id = ad_data['creative']['id']
+                    from facebook_business.adobjects.adcreative import AdCreative
+                    creative = AdCreative(creative_id)
+                    creative_data = creative.api_get(fields=['thumbnail_url'])
+                    preview_url = creative_data.get('thumbnail_url')
+            except Exception as e:
+                logger.warning(f"Could not fetch preview URL for ad {ad_id}: {e}")
 
             return AdPerformance(
                 id=ad_id,
@@ -177,6 +191,7 @@ class MetaService:
                 status=insight.get('ad_delivery_info', {}).get('delivery_status', 'unknown'),
                 campaign_name=campaign_name,
                 adset_name=adset_name,
+                preview_url=preview_url,
                 facebook_url=facebook_url,
                 metrics=metrics,
                 currency=insight.get('account_currency', 'CZK'),
@@ -266,4 +281,438 @@ class MetaService:
             'cpc': Decimal(str(insight.get('cpc', 0))),
             'cpm': Decimal(str(insight.get('cpm', 0))),
             'roas': roas,
+        }
+
+    async def get_top_performing_campaigns(
+        self,
+        client_id: str,
+        start_date: date,
+        end_date: date,
+        attribution: str = "default",
+        limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Get top performing campaigns for a client based on ROAS
+
+        Args:
+            client_id: Meta ad account ID
+            start_date: Start date for the period
+            end_date: End date for the period
+            attribution: Attribution model (default, 7d_click)
+            limit: Number of top campaigns to return
+
+        Returns:
+            List of top performing campaigns with metrics
+        """
+        try:
+            # Get ad account
+            ad_account = AdAccount(f"act_{client_id}")
+
+            # Define insights parameters based on attribution model
+            insights_params = {
+                'time_range': {
+                    'since': start_date.strftime('%Y-%m-%d'),
+                    'until': end_date.strftime('%Y-%m-%d')
+                },
+                'level': 'campaign',
+                'breakdowns': [],
+                'limit': limit * 2,  # Fetch more to account for filtering
+            }
+
+            # Set attribution window based on parameter
+            if attribution == "7d_click":
+                insights_params['action_attribution_windows'] = ['7d_click']
+
+            # Define metrics to fetch
+            insights_fields = [
+                'campaign_id',
+                'campaign_name',
+                'impressions',
+                'clicks',
+                'spend',
+                'actions',
+                'action_values',
+                'ctr',
+                'cpc',
+                'cpm',
+                'frequency',
+                'account_currency'
+            ]
+
+            # Fetch campaigns with insights
+            campaigns_insights = ad_account.get_insights(
+                fields=insights_fields,
+                params=insights_params
+            )
+
+            # Process and rank campaigns by ROAS
+            top_campaigns = []
+            for insight in campaigns_insights:
+                try:
+                    campaign_performance = self._process_campaign_insight(insight, attribution)
+                    if campaign_performance and campaign_performance.get('metrics', {}).get('roas', 0) > 0:
+                        top_campaigns.append(campaign_performance)
+                except Exception as e:
+                    logger.warning(f"Error processing campaign insight: {e}")
+                    continue
+
+            # Sort by ROAS and return top performers
+            top_campaigns.sort(key=lambda x: x.get('metrics', {}).get('roas', 0), reverse=True)
+            return top_campaigns[:limit]
+
+        except Exception as e:
+            logger.error(f"Error fetching top performing campaigns: {e}")
+            raise
+
+    def _process_campaign_insight(self, insight: Dict[str, Any], attribution: str) -> Optional[Dict[str, Any]]:
+        """Process a single campaign insight into campaign performance object"""
+        try:
+            # Extract basic campaign information
+            campaign_id = insight.get('campaign_id')
+            campaign_name = insight.get('campaign_name', '')
+
+            # Extract metrics
+            impressions = int(insight.get('impressions', 0))
+            clicks = int(insight.get('clicks', 0))
+            spend = float(insight.get('spend', 0))
+            ctr = float(insight.get('ctr', 0))
+            cpc = float(insight.get('cpc', 0))
+            cpm = float(insight.get('cpm', 0))
+            frequency = float(insight.get('frequency', 0))
+
+            # Extract conversions and conversion value
+            conversions = 0
+            conversion_value = 0.0
+
+            actions = insight.get('actions', [])
+            action_values = insight.get('action_values', [])
+
+            # Sum up purchase conversions
+            for action in actions:
+                if action.get('action_type') == 'purchase':
+                    conversions += int(action.get('value', 0))
+
+            # Sum up purchase values
+            for action_value in action_values:
+                if action_value.get('action_type') == 'purchase':
+                    conversion_value += float(action_value.get('value', 0))
+
+            # Calculate ROAS
+            roas = conversion_value / spend if spend > 0 else 0
+
+            return {
+                "id": campaign_id,
+                "name": campaign_name,
+                "status": "active",  # Would need separate API call for actual status
+                "metrics": {
+                    "impressions": impressions,
+                    "clicks": clicks,
+                    "spend": spend,
+                    "conversions": conversions,
+                    "conversion_value": conversion_value,
+                    "ctr": ctr,
+                    "cpc": cpc,
+                    "cpm": cpm,
+                    "roas": roas,
+                    "frequency": frequency
+                },
+                "currency": insight.get('account_currency', 'CZK'),
+                "attribution": attribution
+            }
+
+        except Exception as e:
+            logger.error(f"Error processing campaign insight: {e}")
+            return None
+
+    async def get_campaign_details(self, campaign_id: str) -> Dict[str, Any]:
+        """Get detailed information about a specific campaign"""
+        try:
+            campaign = Campaign(campaign_id)
+
+            # Fetch campaign basic info
+            campaign_data = campaign.api_get(fields=[
+                'id',
+                'name',
+                'status',
+                'objective',
+                'daily_budget',
+                'lifetime_budget',
+                'created_time',
+                'updated_time'
+            ])
+
+            return {
+                "id": campaign_data.get('id'),
+                "name": campaign_data.get('name'),
+                "status": campaign_data.get('status'),
+                "objective": campaign_data.get('objective'),
+                "daily_budget": campaign_data.get('daily_budget'),
+                "lifetime_budget": campaign_data.get('lifetime_budget'),
+                "created_time": campaign_data.get('created_time'),
+                "updated_time": campaign_data.get('updated_time')
+            }
+
+        except Exception as e:
+            logger.error(f"Error fetching campaign details: {e}")
+            raise
+
+    async def get_conversion_funnel(
+        self,
+        client_id: str,
+        start_date: date,
+        end_date: date
+    ) -> Dict[str, Any]:
+        """
+        Get conversion funnel data for visualization
+
+        Returns funnel stages with conversion rates:
+        - Impressions
+        - Clicks
+        - Landing Page Views
+        - Add to Cart
+        - Purchase
+        """
+        try:
+            # Get ad account
+            ad_account = AdAccount(f"act_{client_id}")
+
+            # Define insights parameters
+            insights_params = {
+                'time_range': {
+                    'since': start_date.strftime('%Y-%m-%d'),
+                    'until': end_date.strftime('%Y-%m-%d')
+                },
+                'level': 'account',
+                'breakdowns': [],
+            }
+
+            # Define metrics to fetch including all funnel actions
+            insights_fields = [
+                'impressions',
+                'clicks',
+                'actions',
+                'account_currency'
+            ]
+
+            # Fetch account insights
+            insights = ad_account.get_insights(
+                fields=insights_fields,
+                params=insights_params
+            )
+
+            # Process funnel data
+            if insights:
+                insight = insights[0]  # Account level has single result
+
+                impressions = int(insight.get('impressions', 0))
+                clicks = int(insight.get('clicks', 0))
+
+                # Extract different action types
+                actions = insight.get('actions', [])
+                landing_page_views = 0
+                add_to_cart = 0
+                purchases = 0
+
+                for action in actions:
+                    action_type = action.get('action_type')
+                    value = int(action.get('value', 0))
+
+                    if action_type == 'landing_page_view':
+                        landing_page_views += value
+                    elif action_type == 'add_to_cart':
+                        add_to_cart += value
+                    elif action_type == 'purchase':
+                        purchases += value
+
+                # Calculate conversion rates
+                funnel_stages = [
+                    {
+                        "stage": "Impressions",
+                        "count": impressions,
+                        "conversion_rate": 100.0
+                    },
+                    {
+                        "stage": "Clicks",
+                        "count": clicks,
+                        "conversion_rate": (clicks / impressions * 100) if impressions > 0 else 0
+                    },
+                    {
+                        "stage": "Landing Page Views",
+                        "count": landing_page_views,
+                        "conversion_rate": (landing_page_views / clicks * 100) if clicks > 0 else 0
+                    },
+                    {
+                        "stage": "Add to Cart",
+                        "count": add_to_cart,
+                        "conversion_rate": (add_to_cart / landing_page_views * 100) if landing_page_views > 0 else 0
+                    },
+                    {
+                        "stage": "Purchase",
+                        "count": purchases,
+                        "conversion_rate": (purchases / add_to_cart * 100) if add_to_cart > 0 else 0
+                    }
+                ]
+
+                return {
+                    "client_id": client_id,
+                    "period": f"{start_date.isoformat()} to {end_date.isoformat()}",
+                    "funnel_stages": funnel_stages,
+                    "currency": insight.get('account_currency', 'CZK')
+                }
+            else:
+                # Return empty funnel if no data
+                return {
+                    "client_id": client_id,
+                    "period": f"{start_date.isoformat()} to {end_date.isoformat()}",
+                    "funnel_stages": [
+                        {"stage": "Impressions", "count": 0, "conversion_rate": 100.0},
+                        {"stage": "Clicks", "count": 0, "conversion_rate": 0.0},
+                        {"stage": "Landing Page Views", "count": 0, "conversion_rate": 0.0},
+                        {"stage": "Add to Cart", "count": 0, "conversion_rate": 0.0},
+                        {"stage": "Purchase", "count": 0, "conversion_rate": 0.0}
+                    ],
+                    "currency": "CZK"
+                }
+
+        except Exception as e:
+            logger.error(f"Error fetching conversion funnel: {e}")
+            raise
+
+    async def get_week_on_week_comparison(
+        self,
+        client_id: str,
+        current_week_start: date,
+        current_week_end: date,
+        previous_week_start: date,
+        previous_week_end: date
+    ) -> Dict[str, Any]:
+        """
+        Get week-on-week metric comparisons
+
+        Compares current week vs previous week performance
+        """
+        try:
+            # Get ad account
+            ad_account = AdAccount(f"act_{client_id}")
+
+            # Fetch current week metrics
+            current_week_insights = ad_account.get_insights(
+                fields=[
+                    'impressions',
+                    'clicks',
+                    'spend',
+                    'actions',
+                    'action_values',
+                    'ctr',
+                    'account_currency'
+                ],
+                params={
+                    'time_range': {
+                        'since': current_week_start.strftime('%Y-%m-%d'),
+                        'until': current_week_end.strftime('%Y-%m-%d')
+                    },
+                    'level': 'account'
+                }
+            )
+
+            # Fetch previous week metrics
+            previous_week_insights = ad_account.get_insights(
+                fields=[
+                    'impressions',
+                    'clicks',
+                    'spend',
+                    'actions',
+                    'action_values',
+                    'ctr',
+                    'account_currency'
+                ],
+                params={
+                    'time_range': {
+                        'since': previous_week_start.strftime('%Y-%m-%d'),
+                        'until': previous_week_end.strftime('%Y-%m-%d')
+                    },
+                    'level': 'account'
+                }
+            )
+
+            # Process current week data
+            current_metrics = self._extract_week_metrics(current_week_insights[0] if current_week_insights else {})
+            previous_metrics = self._extract_week_metrics(previous_week_insights[0] if previous_week_insights else {})
+
+            # Calculate percentage changes
+            metrics_comparison = {}
+            for metric in ['spend', 'roas', 'conversions', 'ctr', 'impressions', 'clicks']:
+                current_value = current_metrics.get(metric, 0)
+                previous_value = previous_metrics.get(metric, 0)
+
+                if previous_value > 0:
+                    change = ((current_value - previous_value) / previous_value) * 100
+                else:
+                    change = 100.0 if current_value > 0 else 0.0
+
+                metrics_comparison[f"{metric}_change"] = round(change, 2)
+
+            return {
+                "client_id": client_id,
+                "current_week": {
+                    "start_date": current_week_start.isoformat(),
+                    "end_date": current_week_end.isoformat(),
+                    "metrics": current_metrics
+                },
+                "previous_week": {
+                    "start_date": previous_week_start.isoformat(),
+                    "end_date": previous_week_end.isoformat(),
+                    "metrics": previous_metrics
+                },
+                "metrics_comparison": metrics_comparison,
+                "currency": current_week_insights[0].get('account_currency', 'CZK') if current_week_insights else 'CZK'
+            }
+
+        except Exception as e:
+            logger.error(f"Error fetching week-on-week comparison: {e}")
+            raise
+
+    def _extract_week_metrics(self, insight: Dict[str, Any]) -> Dict[str, float]:
+        """Extract metrics from a weekly insight"""
+        if not insight:
+            return {
+                'spend': 0.0,
+                'roas': 0.0,
+                'conversions': 0,
+                'ctr': 0.0,
+                'impressions': 0,
+                'clicks': 0
+            }
+
+        # Extract basic metrics
+        impressions = int(insight.get('impressions', 0))
+        clicks = int(insight.get('clicks', 0))
+        spend = float(insight.get('spend', 0))
+        ctr = float(insight.get('ctr', 0))
+
+        # Extract conversions and conversion value
+        conversions = 0
+        conversion_value = 0.0
+
+        actions = insight.get('actions', [])
+        action_values = insight.get('action_values', [])
+
+        for action in actions:
+            if action.get('action_type') == 'purchase':
+                conversions += int(action.get('value', 0))
+
+        for action_value in action_values:
+            if action_value.get('action_type') == 'purchase':
+                conversion_value += float(action_value.get('value', 0))
+
+        # Calculate ROAS
+        roas = conversion_value / spend if spend > 0 else 0.0
+
+        return {
+            'spend': spend,
+            'roas': roas,
+            'conversions': conversions,
+            'ctr': ctr,
+            'impressions': impressions,
+            'clicks': clicks
         }

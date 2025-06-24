@@ -2,7 +2,7 @@
 Client Pydantic schemas
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -44,5 +44,4 @@ class Client(ClientBase):
     updated_at: datetime
     last_sync_at: Optional[datetime] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

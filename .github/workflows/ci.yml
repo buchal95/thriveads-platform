@@ -117,47 +117,32 @@ jobs:
     needs: [backend-tests, frontend-tests]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop'
-    
+
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Deploy to Railway (Staging)
-      env:
-        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+    - name: Notify staging deployment
       run: |
-        echo "Deploying to Railway staging environment"
-        # Railway deployment commands would go here
-        
-    - name: Deploy to Vercel (Staging)
-      env:
-        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      run: |
-        echo "Deploying to Vercel staging environment"
-        # Vercel deployment commands would go here
+        echo "🚀 Staging deployment triggered"
+        echo "✅ Tests passed - code is ready for staging"
+        echo "📦 Frontend will be automatically deployed to Vercel from develop branch"
+        echo "🐍 Backend will be automatically deployed to Railway from develop branch"
+        echo "🔍 Monitor deployment status in Vercel and Railway dashboards"
 
   deploy-production:
     name: Deploy to Production
     needs: [backend-tests, frontend-tests, security-scan]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Deploy to Railway (Production)
-      env:
-        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+    - name: Notify production deployment
       run: |
-        echo "Deploying to Railway production environment"
-        # Railway deployment commands would go here
-        
-    - name: Deploy to Vercel (Production)
-      env:
-        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      run: |
-        echo "Deploying to Vercel production environment"
-        # Vercel deployment commands would go here
-        
-    - name: Notify deployment success
-      run: |
-        echo "🚀 Production deployment successful!"
+        echo "🚀 Production deployment triggered"
+        echo "✅ All tests passed and security scan completed"
+        echo "📦 Frontend will be automatically deployed to Vercel from main branch"
+        echo "🐍 Backend will be automatically deployed to Railway from main branch"
+        echo "🔍 Monitor deployment status in Vercel and Railway dashboards"
+        echo "🎉 Production deployment initiated successfully!"

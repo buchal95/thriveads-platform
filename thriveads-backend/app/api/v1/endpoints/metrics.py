@@ -45,23 +45,15 @@ async def get_conversion_funnel(
         else:
             raise HTTPException(status_code=400, detail="Invalid period")
         
-        # TODO: Implement funnel data fetching from Meta API
-        # This would aggregate various action types to build the funnel
-        
-        return {
-            "message": "Conversion funnel endpoint - to be implemented",
-            "client_id": client_id,
-            "period": period,
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat(),
-            "funnel_stages": [
-                {"stage": "Impressions", "count": 0, "conversion_rate": 100.0},
-                {"stage": "Clicks", "count": 0, "conversion_rate": 0.0},
-                {"stage": "Landing Page Views", "count": 0, "conversion_rate": 0.0},
-                {"stage": "Add to Cart", "count": 0, "conversion_rate": 0.0},
-                {"stage": "Purchase", "count": 0, "conversion_rate": 0.0}
-            ]
-        }
+        # Fetch conversion funnel data from Meta API
+        meta_service = MetaService()
+        funnel_data = await meta_service.get_conversion_funnel(
+            client_id=client_id,
+            start_date=start_date,
+            end_date=end_date
+        )
+
+        return funnel_data
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching funnel data: {str(e)}")
@@ -90,27 +82,17 @@ async def get_week_on_week_comparison(
         previous_week_start = current_week_start - timedelta(days=7)
         previous_week_end = current_week_start - timedelta(days=1)
         
-        # TODO: Implement week-on-week comparison logic
-        # This would fetch metrics for both periods and calculate percentage changes
-        
-        return {
-            "message": "Week-on-week comparison endpoint - to be implemented",
-            "client_id": client_id,
-            "current_week": {
-                "start_date": current_week_start.isoformat(),
-                "end_date": current_week_end.isoformat()
-            },
-            "previous_week": {
-                "start_date": previous_week_start.isoformat(),
-                "end_date": previous_week_end.isoformat()
-            },
-            "metrics_comparison": {
-                "spend_change": 0.0,
-                "roas_change": 0.0,
-                "conversions_change": 0.0,
-                "ctr_change": 0.0
-            }
-        }
+        # Fetch week-on-week comparison data
+        meta_service = MetaService()
+        comparison_data = await meta_service.get_week_on_week_comparison(
+            client_id=client_id,
+            current_week_start=current_week_start,
+            current_week_end=current_week_end,
+            previous_week_start=previous_week_start,
+            previous_week_end=previous_week_end
+        )
+
+        return comparison_data
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching week-on-week data: {str(e)}")

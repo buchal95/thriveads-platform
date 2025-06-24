@@ -44,17 +44,16 @@ async def get_top_performing_campaigns(
         else:
             raise HTTPException(status_code=400, detail="Invalid period")
         
-        # TODO: Implement get_top_performing_campaigns in MetaService
-        # This would be similar to get_top_performing_ads but aggregated at campaign level
-        
-        return {
-            "message": "Top performing campaigns endpoint - to be implemented",
-            "client_id": client_id,
-            "period": period,
-            "attribution": attribution,
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat()
-        }
+        # Fetch top performing campaigns from Meta API
+        top_campaigns = await meta_service.get_top_performing_campaigns(
+            client_id=client_id,
+            start_date=start_date,
+            end_date=end_date,
+            attribution=attribution,
+            limit=limit
+        )
+
+        return top_campaigns
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching campaigns: {str(e)}")
@@ -66,8 +65,13 @@ async def get_campaign_details(
     db: Session = Depends(get_db)
 ):
     """Get detailed information about a specific campaign"""
-    # TODO: Implement campaign details fetching
-    return {
-        "message": "Campaign details endpoint - to be implemented",
-        "campaign_id": campaign_id
-    }
+    try:
+        meta_service = MetaService()
+
+        # Fetch campaign details from Meta API
+        campaign_details = await meta_service.get_campaign_details(campaign_id)
+
+        return campaign_details
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching campaign details: {str(e)}")

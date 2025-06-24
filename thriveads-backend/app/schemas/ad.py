@@ -2,7 +2,7 @@
 Ad Pydantic schemas
 """
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, ConfigDict
 from typing import Optional, Dict, Any
 from datetime import datetime
 from decimal import Decimal
@@ -26,8 +26,7 @@ class Ad(AdBase):
     created_at: datetime
     updated_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AdMetrics(BaseModel):
