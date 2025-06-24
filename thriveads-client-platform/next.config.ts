@@ -1,19 +1,17 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
-  eslint: {
-    // Disable ESLint during builds to focus on module resolution
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    // Disable type checking during builds temporarily
-    ignoreBuildErrors: true,
-  },
   webpack: (config) => {
     // Ensure webpack resolves the @ alias properly
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@': require('path').resolve(__dirname, 'src'),
+      '@': path.resolve(__dirname, 'src'),
+      '@/components': path.resolve(__dirname, 'src/components'),
+      '@/lib': path.resolve(__dirname, 'src/lib'),
+      '@/data': path.resolve(__dirname, 'src/data'),
+      '@/types': path.resolve(__dirname, 'src/types'),
+      '@/services': path.resolve(__dirname, 'src/services'),
     };
     return config;
   },

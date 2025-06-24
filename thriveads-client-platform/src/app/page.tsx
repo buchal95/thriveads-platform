@@ -19,8 +19,6 @@ export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState<ClientDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isClient, setIsClient] = useState(false);
-
   // Client-safe date formatter to avoid hydration issues
   const formatLastUpdated = (dateString: string) => {
     // Use a consistent format that works the same on server and client
