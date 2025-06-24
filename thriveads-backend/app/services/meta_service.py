@@ -52,13 +52,64 @@ class MetaService:
 
             account = AdAccount(f"act_{client_id}")
 
-            # Get all campaigns first, then filter by spend if needed
-            campaigns = account.get_campaigns(
-                fields=['id', 'name', 'status', 'objective']
-            )
+            # Use insights API directly for better performance when active_only=True
+            if active_only:
+                # Get insights directly with spend filtering - much more efficient
+                insights = account.get_insights(
+                    fields=[
+                        'campaign_id', 'campaign_name', 'spend', 'impressions',
+                        'clicks', 'actions', 'cpm', 'cpc', 'ctr', 'frequency'
+                    ],
+                    params={
+                        'time_range': {
+                            'since': start_date.strftime('%Y-%m-%d'),
+                            'until': end_date.strftime('%Y-%m-%d')
+                        },
+                        'level': 'campaign',
+                        'filtering': [
+                            {
+                                'field': 'spend',
+                                'operator': 'GREATER_THAN',
+                                'value': 0
+                            }
+                        ]
+                    }
+                )
 
-            # If active_only, we'll filter by spend during insights processing
-            # This is more reliable than trying to filter campaigns directly
+                campaigns_data = []
+                for insight in insights:
+                    # Extract conversions from actions
+                    actions = insight.get('actions', [])
+                    conversions = sum(int(action['value']) for action in actions
+                                    if action['action_type'] in ['purchase', 'complete_registration'])
+
+                    campaign_data = {
+                        'campaign_id': insight.get('campaign_id'),
+                        'campaign_name': insight.get('campaign_name'),
+                        'status': 'ACTIVE',  # Campaigns with spend are active
+                        'objective': 'CONVERSIONS',  # Default objective
+                        'spend': float(insight.get('spend', 0)),
+                        'impressions': int(insight.get('impressions', 0)),
+                        'clicks': int(insight.get('clicks', 0)),
+                        'conversions': conversions,
+                        'cost_per_result': 0,  # Calculate if needed
+                        'cpm': float(insight.get('cpm', 0)),
+                        'cpc': float(insight.get('cpc', 0)),
+                        'ctr': float(insight.get('ctr', 0)),
+                        'frequency': float(insight.get('frequency', 0))
+                    }
+                    campaigns_data.append(campaign_data)
+
+                return campaigns_data
+
+            else:
+                # Get all campaigns first, then filter by spend if needed
+                campaigns = account.get_campaigns(
+                    fields=['id', 'name', 'status', 'objective']
+                )
+
+                # If active_only, we'll filter by spend during insights processing
+                # This is more reliable than trying to filter campaigns directly
 
             campaigns_data = []
             for campaign in campaigns:
@@ -144,13 +195,72 @@ class MetaService:
 
             account = AdAccount(f"act_{client_id}")
 
-            # Get all ads first, then filter by spend if needed
-            ads = account.get_ads(
-                fields=['id', 'name', 'status', 'campaign_id']
-            )
+            # Use insights API directly for better performance when active_only=True
+            if active_only:
+                # Get insights directly with spend filtering - much more efficient
+                insights = account.get_insights(
+                    fields=[
+                        'ad_id', 'ad_name', 'campaign_id', 'campaign_name', 'spend',
+                        'impressions', 'clicks', 'actions', 'cpm', 'cpc', 'ctr',
+                        'frequency', 'video_views', 'video_view_rate', 'reach'
+                    ],
+                    params={
+                        'time_range': {
+                            'since': start_date.strftime('%Y-%m-%d'),
+                            'until': end_date.strftime('%Y-%m-%d')
+                        },
+                        'level': 'ad',
+                        'filtering': [
+                            {
+                                'field': 'spend',
+                                'operator': 'GREATER_THAN',
+                                'value': 0
+                            }
+                        ]
+                    }
+                )
 
-            # If active_only, we'll filter by spend during insights processing
-            # This is more reliable than trying to filter ads directly
+                ads_data = []
+                for insight in insights:
+                    # Extract conversions and link clicks from actions
+                    actions = insight.get('actions', [])
+                    conversions = sum(int(action['value']) for action in actions
+                                    if action['action_type'] in ['purchase', 'complete_registration'])
+                    link_clicks = sum(int(action['value']) for action in actions
+                                    if action['action_type'] == 'link_click')
+
+                    ad_data = {
+                        'ad_id': insight.get('ad_id'),
+                        'ad_name': insight.get('ad_name'),
+                        'status': 'ACTIVE',  # Ads with spend are active
+                        'campaign_id': insight.get('campaign_id'),
+                        'campaign_name': insight.get('campaign_name'),
+                        'spend': float(insight.get('spend', 0)),
+                        'impressions': int(insight.get('impressions', 0)),
+                        'clicks': int(insight.get('clicks', 0)),
+                        'conversions': conversions,
+                        'link_clicks': link_clicks,
+                        'cost_per_result': 0,  # Calculate if needed
+                        'cpm': float(insight.get('cpm', 0)),
+                        'cpc': float(insight.get('cpc', 0)),
+                        'ctr': float(insight.get('ctr', 0)),
+                        'frequency': float(insight.get('frequency', 0)),
+                        'video_views': int(insight.get('video_views', 0)),
+                        'video_view_rate': float(insight.get('video_view_rate', 0)),
+                        'reach': int(insight.get('reach', 0))
+                    }
+                    ads_data.append(ad_data)
+
+                return ads_data
+
+            else:
+                # Get all ads first, then filter by spend if needed
+                ads = account.get_ads(
+                    fields=['id', 'name', 'status', 'campaign_id']
+                )
+
+                # If active_only, we'll filter by spend during insights processing
+                # This is more reliable than trying to filter ads directly
 
             ads_data = []
             for ad in ads:
