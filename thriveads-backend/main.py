@@ -145,6 +145,120 @@ async def test_meta_api():
         }
 
 
+@app.post("/sync-yesterday")
+async def sync_yesterday_data():
+    """Manually trigger sync for yesterday's data"""
+    try:
+        from datetime import date, timedelta
+        from app.services.meta_service import MetaService
+
+        if not settings.META_ACCESS_TOKEN:
+            return {
+                "status": "error",
+                "message": "META_ACCESS_TOKEN not configured"
+            }
+
+        yesterday = date.today() - timedelta(days=1)
+        meta_service = MetaService()
+
+        # Get yesterday's campaigns data
+        campaigns_data = await meta_service.get_campaigns_with_metrics(
+            client_id=settings.DEFAULT_CLIENT_ID,
+            start_date=yesterday,
+            end_date=yesterday
+        )
+
+        # Get yesterday's ads data
+        ads_data = await meta_service.get_ads_with_metrics(
+            client_id=settings.DEFAULT_CLIENT_ID,
+            start_date=yesterday,
+            end_date=yesterday
+        )
+
+        return {
+            "status": "success",
+            "message": f"Successfully synced data for {yesterday}",
+            "date": str(yesterday),
+            "campaigns_count": len(campaigns_data),
+            "ads_count": len(ads_data),
+            "campaigns_data": campaigns_data[:5],  # Show first 5 for preview
+            "ads_data": ads_data[:5]  # Show first 5 for preview
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to sync yesterday's data: {str(e)}"
+        }
+
+
+@app.post("/start-daily-sync")
+async def start_daily_sync():
+    """Start automated daily sync at 6:00 AM"""
+    try:
+        from app.services.scheduler_service import scheduler_service
+
+        scheduler_service.start_scheduler()
+
+        return {
+            "status": "success",
+            "message": "Daily sync scheduler started",
+            "schedule": "Every day at 6:00 AM",
+            "next_sync": "Tomorrow at 6:00 AM (syncs yesterday's data)"
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to start scheduler: {str(e)}"
+        }
+
+
+@app.post("/stop-daily-sync")
+async def stop_daily_sync():
+    """Stop automated daily sync"""
+    try:
+        from app.services.scheduler_service import scheduler_service
+
+        scheduler_service.stop_scheduler()
+
+        return {
+            "status": "success",
+            "message": "Daily sync scheduler stopped"
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to stop scheduler: {str(e)}"
+        }
+
+
+@app.get("/sync-status")
+async def get_sync_status():
+    """Get current sync scheduler status"""
+    try:
+        from app.services.scheduler_service import scheduler_service
+
+        status = scheduler_service.get_scheduler_status()
+
+        return {
+            "status": "success",
+            "scheduler": status,
+            "instructions": {
+                "start_sync": "POST /start-daily-sync",
+                "stop_sync": "POST /stop-daily-sync",
+                "manual_sync": "POST /sync-yesterday"
+            }
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to get sync status: {str(e)}"
+        }
+
+
 if __name__ == "__main__":
     import uvicorn
     import os
