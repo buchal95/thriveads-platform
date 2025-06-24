@@ -1488,11 +1488,23 @@ async def test_meta_api_simple():
         # Get account
         account = AdAccount(f"act_{settings.DEFAULT_CLIENT_ID}")
 
-        # Get campaigns with spend > 0 (eliminates old unused campaigns)
-        campaigns = account.get_campaigns(
-            fields=['id', 'name', 'status'],  # Minimal fields
+        # Get campaigns with insights (only campaigns with spend will have insights)
+        # This is more efficient than getting all campaigns and filtering
+        from datetime import date, timedelta
+
+        # Get insights for last 30 days to find campaigns with spend
+        end_date = date.today()
+        start_date = end_date - timedelta(days=30)
+
+        insights = account.get_insights(
+            fields=['campaign_id', 'campaign_name', 'spend'],
             params={
-                'limit': 10,  # Just first 10 campaigns
+                'time_range': {
+                    'since': start_date.strftime('%Y-%m-%d'),
+                    'until': end_date.strftime('%Y-%m-%d')
+                },
+                'level': 'campaign',
+                'limit': 10,  # Just first 10 campaigns with spend
                 'filtering': [
                     {
                         'field': 'spend',
@@ -1502,6 +1514,15 @@ async def test_meta_api_simple():
                 ]
             }
         )
+
+        campaign_list = []
+        for insight in insights:
+            campaign_list.append({
+                'id': insight.get('campaign_id'),
+                'name': insight.get('campaign_name'),
+                'spend': insight.get('spend', 0),
+                'status': 'active_with_spend'  # These campaigns have recent spend
+            })
 
         campaign_list = []
         for campaign in campaigns:
@@ -1516,7 +1537,7 @@ async def test_meta_api_simple():
             "message": "Meta API simple test successful",
             "campaigns_found": len(campaign_list),
             "campaigns": campaign_list,
-            "note": "Only campaigns with spend > 0 requested - no metrics, no unused campaigns"
+            "note": "Only campaigns with recent spend (last 30 days) - much faster than fetching all campaigns"
         }
 
     except Exception as e:
