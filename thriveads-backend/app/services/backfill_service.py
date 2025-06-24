@@ -82,18 +82,20 @@ class BackfillService:
         """Check what data already exists for a specific date"""
         
         # Check if we have campaign metrics for this date
-        campaign_metrics_exist = db.query(CampaignMetrics).filter(
+        # Use join instead of relationship navigation
+        campaign_metrics_exist = db.query(CampaignMetrics).join(Campaign).filter(
             and_(
                 CampaignMetrics.date == target_date,
-                CampaignMetrics.campaign.has(Campaign.client_id == self.client_id)
+                Campaign.client_id == self.client_id
             )
         ).first() is not None
         
         # Check if we have ad metrics for this date
-        ad_metrics_exist = db.query(AdMetrics).filter(
+        # Use join instead of relationship navigation
+        ad_metrics_exist = db.query(AdMetrics).join(Ad).join(Campaign).filter(
             and_(
                 AdMetrics.date == target_date,
-                AdMetrics.ad.has(Ad.campaign.has(Campaign.client_id == self.client_id))
+                Campaign.client_id == self.client_id
             )
         ).first() is not None
         
@@ -183,6 +185,7 @@ class BackfillService:
         client = db.query(Client).filter(Client.meta_ad_account_id == self.client_id).first()
         if not client:
             client = Client(
+                id=f"client_{self.client_id}",  # Generate a unique ID
                 name="Mimilátky CZ",
                 meta_ad_account_id=self.client_id,
                 currency="CZK"
@@ -193,14 +196,14 @@ class BackfillService:
         # Get or create campaign
         campaign = db.query(Campaign).filter(
             and_(
-                Campaign.meta_campaign_id == campaign_data['campaign_id'],
+                Campaign.id == campaign_data['campaign_id'],
                 Campaign.client_id == client.id
             )
         ).first()
-        
+
         if not campaign:
             campaign = Campaign(
-                meta_campaign_id=campaign_data['campaign_id'],
+                id=campaign_data['campaign_id'],
                 name=campaign_data['campaign_name'],
                 status=campaign_data.get('status', 'UNKNOWN'),
                 objective=campaign_data.get('objective', 'UNKNOWN'),
@@ -237,7 +240,7 @@ class BackfillService:
         
         # Get campaign (should exist from campaign backfill)
         campaign = db.query(Campaign).filter(
-            Campaign.meta_campaign_id == ad_data['campaign_id']
+            Campaign.id == ad_data['campaign_id']
         ).first()
         
         if not campaign:
@@ -246,15 +249,16 @@ class BackfillService:
         
         # Get or create ad
         ad = db.query(Ad).filter(
-            Ad.meta_ad_id == ad_data['ad_id']
+            Ad.id == ad_data['ad_id']
         ).first()
-        
+
         if not ad:
             ad = Ad(
-                meta_ad_id=ad_data['ad_id'],
+                id=ad_data['ad_id'],
                 name=ad_data['ad_name'],
                 status=ad_data.get('status', 'UNKNOWN'),
-                campaign_id=campaign.id
+                campaign_id=campaign.id,
+                client_id=campaign.client_id  # Add client_id
             )
             db.add(ad)
             db.flush()
