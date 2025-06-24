@@ -1465,6 +1465,59 @@ async def test_meta_api_data():
         }
 
 
+@app.post("/test-meta-api-simple")
+async def test_meta_api_simple():
+    """Test Meta API with minimal data request (just campaign list, no metrics)"""
+    try:
+        from facebook_business.api import FacebookAdsApi
+        from facebook_business.adobjects.adaccount import AdAccount
+        from facebook_business.adobjects.campaign import Campaign
+
+        if not settings.META_ACCESS_TOKEN:
+            return {
+                "status": "error",
+                "message": "META_ACCESS_TOKEN not configured"
+            }
+
+        # Initialize API
+        FacebookAdsApi.init(
+            access_token=settings.META_ACCESS_TOKEN,
+            api_version=settings.META_API_VERSION
+        )
+
+        # Get account
+        account = AdAccount(f"act_{settings.DEFAULT_CLIENT_ID}")
+
+        # Get just campaign list (no metrics, no date filtering)
+        campaigns = account.get_campaigns(
+            fields=['id', 'name', 'status'],  # Minimal fields
+            params={'limit': 10}  # Just first 10 campaigns
+        )
+
+        campaign_list = []
+        for campaign in campaigns:
+            campaign_list.append({
+                'id': campaign.get('id'),
+                'name': campaign.get('name'),
+                'status': campaign.get('status')
+            })
+
+        return {
+            "status": "success",
+            "message": "Meta API simple test successful",
+            "campaigns_found": len(campaign_list),
+            "campaigns": campaign_list,
+            "note": "No metrics requested - just basic campaign info"
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Meta API simple test failed: {str(e)}",
+            "error_type": type(e).__name__
+        }
+
+
 if __name__ == "__main__":
     import uvicorn
     import os
