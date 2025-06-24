@@ -2,17 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { User, Bell, Settings, RefreshCw } from 'lucide-react';
-import { TimePeriod, ClientDashboardData } from '@/types/meta-ads';
-import { mockClientData } from '@/data/mock-data';
-import { TimePeriodSelector, DateRangeDisplay } from '@/components/TimePeriodSelector';
-import { SpendCard, ImpressionsCard, ROASCard, ConversionsCard } from '@/components/MetricCard';
-import { SpendTrendChart, WeeklySpendTrendChart, CampaignPerformanceChart, ROASComparisonChart, MetricsOverview } from '@/components/Charts';
-import { CampaignTable } from '@/components/CampaignTable';
-import { AttributionComparison } from '@/components/AttributionComparison';
-import { BestPerformingAds } from '@/components/BestPerformingAds';
-import { WeekComparison } from '@/components/WeekComparison';
-import { formatROAS } from '@/lib/utils';
-import { apiService } from '@/services/api';
+import { TimePeriod, ClientDashboardData } from '../types/meta-ads';
+import { mockClientData } from '../data/mock-data';
+import { TimePeriodSelector, DateRangeDisplay } from '../components/TimePeriodSelector';
+import { SpendCard, ImpressionsCard, ROASCard, ConversionsCard } from '../components/MetricCard';
+import { SpendTrendChart, WeeklySpendTrendChart, CampaignPerformanceChart, ROASComparisonChart, MetricsOverview } from '../components/Charts';
+import { CampaignTable } from '../components/CampaignTable';
+import { AttributionComparison } from '../components/AttributionComparison';
+import { BestPerformingAds } from '../components/BestPerformingAds';
+import { WeekComparison } from '../components/WeekComparison';
+import { formatROAS } from '../lib/utils';
+import { apiService } from '../services/api';
 
 export default function Dashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('last_week');

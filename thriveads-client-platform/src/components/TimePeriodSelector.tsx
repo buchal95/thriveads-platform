@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { Calendar, ChevronDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { TimePeriod } from '@/types/meta-ads';
+import { cn } from '../lib/utils';
+import { TimePeriod } from '../types/meta-ads';
 
 interface TimePeriodSelectorProps {
   selectedPeriod: TimePeriod;

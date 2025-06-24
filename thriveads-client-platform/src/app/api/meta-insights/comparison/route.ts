@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentClientConfig } from '@/config/clients';
-import { getLastMonday, getLastSunday } from '@/lib/utils';
-import { WeekComparison, MetricChange } from '@/types/meta-ads';
+import { getCurrentClientConfig } from '../../../../config/clients';
+import { getLastMonday, getLastSunday } from '../../../../lib/utils';
+import { WeekComparison, MetricChange } from '../../../../types/meta-ads';
 
 // Meta API service for week-on-week comparison
 class MetaComparisonAPIService {

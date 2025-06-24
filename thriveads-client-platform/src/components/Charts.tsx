@@ -16,8 +16,8 @@ import {
   Cell
 } from 'recharts';
 import { BarChart3 } from 'lucide-react';
-import { DailyMetrics, WeeklyMetrics, CampaignData } from '@/types/meta-ads';
-import { formatCurrency, formatNumber, formatROAS } from '@/lib/utils';
+import { DailyMetrics, WeeklyMetrics, CampaignData } from '../types/meta-ads';
+import { formatCurrency, formatNumber, formatROAS } from '../lib/utils';
 
 // Daily spend trend chart
 interface SpendTrendChartProps {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentClientConfig } from '@/config/clients';
-import { getLastMonday, getLastSunday } from '@/lib/utils';
-import { AdData } from '@/types/meta-ads';
+import { getCurrentClientConfig } from '../../../../config/clients';
+import { getLastMonday, getLastSunday } from '../../../../lib/utils';
+import { AdData } from '../../../../types/meta-ads';
 
 // Meta API service for fetching ad-level data
 class MetaAdsAPIService {

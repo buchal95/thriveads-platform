@@ -1,4 +1,4 @@
-import { ClientDashboardData, CampaignData, DailyMetrics, WeeklyMetrics } from '@/types/meta-ads';
+import { ClientDashboardData, CampaignData, DailyMetrics, WeeklyMetrics } from '../types/meta-ads';
 
 // Mock campaign data
 const mockCampaigns: CampaignData[] = [

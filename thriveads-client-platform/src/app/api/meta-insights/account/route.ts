@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentClientConfig } from '@/config/clients';
-import { AccountInfo } from '@/types/meta-ads';
+import { getCurrentClientConfig } from '../../../../config/clients';
+import { AccountInfo } from '../../../../types/meta-ads';
 
 // Meta API service for account information
 class MetaAccountAPIService {

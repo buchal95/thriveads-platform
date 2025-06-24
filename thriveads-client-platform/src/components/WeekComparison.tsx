@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Minus, Calendar, RefreshCw } from 'lucide-react';
-import { WeekComparison as WeekComparisonType, MetricChange } from '@/types/meta-ads';
-import { formatCurrency, formatROAS, formatNumber, cn } from '@/lib/utils';
-import { apiService, type WeekComparison as ApiWeekComparison } from '@/services/api';
+import { WeekComparison as WeekComparisonType, MetricChange } from '../types/meta-ads';
+import { formatCurrency, formatROAS, formatNumber, cn } from '../lib/utils';
+import { apiService, type WeekComparison as ApiWeekComparison } from '../services/api';
 
 interface WeekComparisonProps {
   className?: string;

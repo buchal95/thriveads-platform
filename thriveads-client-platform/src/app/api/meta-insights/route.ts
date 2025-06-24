@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentClientConfig } from '@/config/clients';
-import { getLastMonday, getLastSunday, getFirstDayOfLastMonth, getLastDayOfLastMonth } from '@/lib/utils';
+import { getCurrentClientConfig } from '../../../config/clients';
+import { getLastMonday, getLastSunday, getFirstDayOfLastMonth, getLastDayOfLastMonth } from '../../../lib/utils';
 
 // Meta API service for fetching real data
 class MetaAPIService {

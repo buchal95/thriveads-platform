@@ -1,5 +1,5 @@
-import { AttributionWindow, ClientDashboardData, CampaignData, DailyMetrics, MetaAdMetrics, PurchaseConversions } from '@/types/meta-ads';
-import { ClientConfig } from '@/config/clients';
+import { AttributionWindow, ClientDashboardData, CampaignData, DailyMetrics, MetaAdMetrics, PurchaseConversions } from '../types/meta-ads';
+import { ClientConfig } from '../config/clients';
 
 // Meta API Configuration
 interface MetaAPIConfig {

@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown, Download, Eye } from 'lucide-react';
-import { CampaignData } from '@/types/meta-ads';
-import { formatCurrency, formatNumber, formatPercentage, formatCTR, formatROAS, cn } from '@/lib/utils';
+import { CampaignData } from '../types/meta-ads';
+import { formatCurrency, formatNumber, formatPercentage, formatCTR, formatROAS, cn } from '../lib/utils';
 
 interface CampaignTableProps {
   campaigns: CampaignData[];
