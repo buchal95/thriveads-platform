@@ -5,6 +5,7 @@ Main application entry point
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from contextlib import asynccontextmanager
 import structlog
 
@@ -1539,6 +1540,14 @@ async def test_meta_api_simple():
             "message": f"Meta API simple test failed: {str(e)}",
             "error_type": type(e).__name__
         }
+
+
+@app.get("/test-backfill-browser")
+async def test_backfill_browser():
+    """Serve the backfill system browser test page"""
+    with open("test-backfill-browser.html", "r") as f:
+        html_content = f.read()
+    return HTMLResponse(content=html_content)
 
 
 if __name__ == "__main__":
