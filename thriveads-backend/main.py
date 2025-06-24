@@ -87,47 +87,14 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Detailed health check"""
-    from app.database.connection import get_db
-    from sqlalchemy import text
+    """Simple health check for Railway"""
     import time
-
-    start_time = time.time()
-    health_status = {
+    return {
         "status": "healthy",
         "environment": settings.ENVIRONMENT,
-        "timestamp": start_time,
-        "checks": {}
+        "timestamp": time.time(),
+        "message": "ThriveAds Backend is running"
     }
-
-    # Database health check
-    try:
-        db = next(get_db())
-        db.execute(text("SELECT 1"))
-        health_status["checks"]["database"] = {
-            "status": "healthy",
-            "response_time_ms": round((time.time() - start_time) * 1000, 2)
-        }
-    except Exception as e:
-        health_status["status"] = "unhealthy"
-        health_status["checks"]["database"] = {
-            "status": "unhealthy",
-            "error": str(e)
-        }
-
-    # Meta API configuration check
-    if settings.META_ACCESS_TOKEN:
-        health_status["checks"]["meta_api"] = {
-            "status": "configured",
-            "has_token": True
-        }
-    else:
-        health_status["checks"]["meta_api"] = {
-            "status": "not_configured",
-            "has_token": False
-        }
-
-    return health_status
 
 
 if __name__ == "__main__":
