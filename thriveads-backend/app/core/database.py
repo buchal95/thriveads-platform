@@ -12,11 +12,27 @@ from .config import settings
 
 logger = structlog.get_logger()
 
+# Create database engine with Railway-compatible configuration
+def get_database_url():
+    """Get database URL with proper configuration for Railway"""
+    db_url = settings.DATABASE_URL
+
+    # Handle Railway's DATABASE_URL format
+    if db_url.startswith("postgresql://"):
+        # Railway provides postgresql:// but SQLAlchemy 2.0+ prefers postgresql+psycopg2://
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+
+    logger.info("Database URL configured", url_scheme=db_url.split("://")[0] if "://" in db_url else "unknown")
+    return db_url
+
 # Create database engine
 engine = create_engine(
-    settings.DATABASE_URL,
+    get_database_url(),
     pool_pre_ping=True,
     pool_recycle=300,
+    pool_size=5,
+    max_overflow=10,
+    echo=settings.ENVIRONMENT == "development"
 )
 
 # Create async engine for async operations (only if needed)
