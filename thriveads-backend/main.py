@@ -1157,10 +1157,11 @@ async def get_sync_status():
 async def init_database():
     """Initialize database tables"""
     try:
-        from app.core.database import engine, Base
+        from app.core.database import get_engine, Base
         from app.models import campaign, ad, client, metrics  # Import all models
 
-        # Create all tables
+        # Get engine and create all tables
+        engine = get_engine()
         Base.metadata.create_all(bind=engine)
 
         return {
