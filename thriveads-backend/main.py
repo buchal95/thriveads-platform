@@ -1497,7 +1497,7 @@ async def test_meta_api_simple():
         end_date = date.today()
         start_date = end_date - timedelta(days=30)
 
-        # Use correct filtering syntax with campaign.spend
+        # Remove filtering, filter in code instead for reliability
         insights = account.get_insights(
             fields=['campaign_id', 'campaign_name', 'spend'],
             params={
@@ -1506,14 +1506,7 @@ async def test_meta_api_simple():
                     'until': end_date.strftime('%Y-%m-%d')
                 },
                 'level': 'campaign',
-                'limit': 20,  # Get campaigns with spend
-                'filtering': [
-                    {
-                        'field': 'campaign.spend',
-                        'operator': 'GREATER_THAN',
-                        'value': 0
-                    }
-                ]
+                'limit': 50  # Get more campaigns, filter by spend in code
             }
         )
 

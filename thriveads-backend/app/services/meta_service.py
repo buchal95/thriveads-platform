@@ -66,39 +66,36 @@ class MetaService:
                             'until': end_date.strftime('%Y-%m-%d')
                         },
                         'level': 'campaign',
-                        'filtering': [
-                            {
-                                'field': 'campaign.spend',
-                                'operator': 'GREATER_THAN',
-                                'value': 0
-                            }
-                        ]
+                        'limit': 100  # Get more campaigns, filter by spend in code
                     }
                 )
 
                 campaigns_data = []
                 for insight in insights:
-                    # Extract conversions from actions
-                    actions = insight.get('actions', [])
-                    conversions = sum(int(action['value']) for action in actions
-                                    if action['action_type'] in ['purchase', 'complete_registration'])
+                    spend = float(insight.get('spend', 0))
+                    # Only include campaigns with spend > 0
+                    if spend > 0:
+                        # Extract conversions from actions
+                        actions = insight.get('actions', [])
+                        conversions = sum(int(action['value']) for action in actions
+                                        if action['action_type'] in ['purchase', 'complete_registration'])
 
-                    campaign_data = {
-                        'campaign_id': insight.get('campaign_id'),
-                        'campaign_name': insight.get('campaign_name'),
-                        'status': 'ACTIVE',  # Campaigns with spend are active
-                        'objective': 'CONVERSIONS',  # Default objective
-                        'spend': float(insight.get('spend', 0)),
-                        'impressions': int(insight.get('impressions', 0)),
-                        'clicks': int(insight.get('clicks', 0)),
-                        'conversions': conversions,
-                        'cost_per_result': 0,  # Calculate if needed
-                        'cpm': float(insight.get('cpm', 0)),
-                        'cpc': float(insight.get('cpc', 0)),
-                        'ctr': float(insight.get('ctr', 0)),
-                        'frequency': float(insight.get('frequency', 0))
-                    }
-                    campaigns_data.append(campaign_data)
+                        campaign_data = {
+                            'campaign_id': insight.get('campaign_id'),
+                            'campaign_name': insight.get('campaign_name'),
+                            'status': 'ACTIVE',  # Campaigns with spend are active
+                            'objective': 'CONVERSIONS',  # Default objective
+                            'spend': spend,
+                            'impressions': int(insight.get('impressions', 0)),
+                            'clicks': int(insight.get('clicks', 0)),
+                            'conversions': conversions,
+                            'cost_per_result': 0,  # Calculate if needed
+                            'cpm': float(insight.get('cpm', 0)),
+                            'cpc': float(insight.get('cpc', 0)),
+                            'ctr': float(insight.get('ctr', 0)),
+                            'frequency': float(insight.get('frequency', 0))
+                        }
+                        campaigns_data.append(campaign_data)
 
                 return campaigns_data
 
@@ -210,46 +207,43 @@ class MetaService:
                             'until': end_date.strftime('%Y-%m-%d')
                         },
                         'level': 'ad',
-                        'filtering': [
-                            {
-                                'field': 'ad.spend',
-                                'operator': 'GREATER_THAN',
-                                'value': 0
-                            }
-                        ]
+                        'limit': 100  # Get more ads, filter by spend in code
                     }
                 )
 
                 ads_data = []
                 for insight in insights:
-                    # Extract conversions and link clicks from actions
-                    actions = insight.get('actions', [])
-                    conversions = sum(int(action['value']) for action in actions
-                                    if action['action_type'] in ['purchase', 'complete_registration'])
-                    link_clicks = sum(int(action['value']) for action in actions
-                                    if action['action_type'] == 'link_click')
+                    spend = float(insight.get('spend', 0))
+                    # Only include ads with spend > 0
+                    if spend > 0:
+                        # Extract conversions and link clicks from actions
+                        actions = insight.get('actions', [])
+                        conversions = sum(int(action['value']) for action in actions
+                                        if action['action_type'] in ['purchase', 'complete_registration'])
+                        link_clicks = sum(int(action['value']) for action in actions
+                                        if action['action_type'] == 'link_click')
 
-                    ad_data = {
-                        'ad_id': insight.get('ad_id'),
-                        'ad_name': insight.get('ad_name'),
-                        'status': 'ACTIVE',  # Ads with spend are active
-                        'campaign_id': insight.get('campaign_id'),
-                        'campaign_name': insight.get('campaign_name'),
-                        'spend': float(insight.get('spend', 0)),
-                        'impressions': int(insight.get('impressions', 0)),
-                        'clicks': int(insight.get('clicks', 0)),
-                        'conversions': conversions,
-                        'link_clicks': link_clicks,
-                        'cost_per_result': 0,  # Calculate if needed
-                        'cpm': float(insight.get('cpm', 0)),
-                        'cpc': float(insight.get('cpc', 0)),
-                        'ctr': float(insight.get('ctr', 0)),
-                        'frequency': float(insight.get('frequency', 0)),
-                        'video_views': int(insight.get('video_views', 0)),
-                        'video_view_rate': float(insight.get('video_view_rate', 0)),
-                        'reach': int(insight.get('reach', 0))
-                    }
-                    ads_data.append(ad_data)
+                        ad_data = {
+                            'ad_id': insight.get('ad_id'),
+                            'ad_name': insight.get('ad_name'),
+                            'status': 'ACTIVE',  # Ads with spend are active
+                            'campaign_id': insight.get('campaign_id'),
+                            'campaign_name': insight.get('campaign_name'),
+                            'spend': spend,
+                            'impressions': int(insight.get('impressions', 0)),
+                            'clicks': int(insight.get('clicks', 0)),
+                            'conversions': conversions,
+                            'link_clicks': link_clicks,
+                            'cost_per_result': 0,  # Calculate if needed
+                            'cpm': float(insight.get('cpm', 0)),
+                            'cpc': float(insight.get('cpc', 0)),
+                            'ctr': float(insight.get('ctr', 0)),
+                            'frequency': float(insight.get('frequency', 0)),
+                            'video_views': int(insight.get('video_views', 0)),
+                            'video_view_rate': float(insight.get('video_view_rate', 0)),
+                            'reach': int(insight.get('reach', 0))
+                        }
+                        ads_data.append(ad_data)
 
                 return ads_data
 
@@ -377,13 +371,7 @@ class MetaService:
                 'level': 'ad',
                 'breakdowns': [],
                 'limit': limit * 2,  # Fetch more to account for filtering
-                'filtering': [
-                    {
-                        'field': 'ad.spend',
-                        'operator': 'GREATER_THAN',
-                        'value': 0  # Only ads with spend > 0
-                    }
-                ]
+                'limit': 100  # Get more ads, filter by spend in code
             }
             
             # Set attribution window based on parameter
@@ -418,9 +406,12 @@ class MetaService:
             top_ads = []
             for insight in ads_insights:
                 try:
-                    ad_performance = self._process_ad_insight(insight, attribution)
-                    if ad_performance and ad_performance.metrics.roas > 0:
-                        top_ads.append(ad_performance)
+                    spend = float(insight.get('spend', 0))
+                    # Only include ads with spend > 0
+                    if spend > 0:
+                        ad_performance = self._process_ad_insight(insight, attribution)
+                        if ad_performance and ad_performance.metrics.roas > 0:
+                            top_ads.append(ad_performance)
                 except Exception as e:
                     logger.warning(f"Error processing ad insight: {e}")
                     continue
@@ -634,13 +625,7 @@ class MetaService:
                 'level': 'campaign',
                 'breakdowns': [],
                 'limit': limit * 2,  # Fetch more to account for filtering
-                'filtering': [
-                    {
-                        'field': 'campaign.spend',
-                        'operator': 'GREATER_THAN',
-                        'value': 0  # Only campaigns with spend > 0
-                    }
-                ]
+                'limit': 100  # Get more campaigns, filter by spend in code
             }
 
             # Set attribution window based on parameter
@@ -673,9 +658,12 @@ class MetaService:
             top_campaigns = []
             for insight in campaigns_insights:
                 try:
-                    campaign_performance = self._process_campaign_insight(insight, attribution)
-                    if campaign_performance and campaign_performance.get('metrics', {}).get('roas', 0) > 0:
-                        top_campaigns.append(campaign_performance)
+                    spend = float(insight.get('spend', 0))
+                    # Only include campaigns with spend > 0
+                    if spend > 0:
+                        campaign_performance = self._process_campaign_insight(insight, attribution)
+                        if campaign_performance and campaign_performance.get('metrics', {}).get('roas', 0) > 0:
+                            top_campaigns.append(campaign_performance)
                 except Exception as e:
                     logger.warning(f"Error processing campaign insight: {e}")
                     continue

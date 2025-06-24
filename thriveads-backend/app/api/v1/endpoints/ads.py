@@ -18,17 +18,22 @@ router = APIRouter()
 @router.get("/2025-data")
 async def get_2025_ads_data(
     client_id: str = Query("513010266454814", description="Client Meta ad account ID"),
+    days: int = Query(30, description="Number of days to fetch (default: 30, max: 90)"),
     db: Session = Depends(get_db)
 ):
     """
-    Get all ads data for 2025 for Mimilátky CZ
+    Get recent ads data for 2025 for Mimilátky CZ
+    Optimized for Railway Pro - fetches last N days instead of full year
     """
     try:
         meta_service = MetaService()
 
-        # Get 2025 data (January 1 to December 31, 2025)
-        start_date = datetime(2025, 1, 1).date()
-        end_date = datetime(2025, 12, 31).date()
+        # Limit days to prevent timeouts (max 90 days)
+        days = min(days, 90)
+
+        # Get recent data (last N days from today)
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=days)
 
         # Fetch ads data from Meta API for 2025 (only ads with spend > 0)
         ads_2025 = await meta_service.get_ads_with_metrics(
@@ -46,14 +51,15 @@ async def get_2025_ads_data(
 
         return {
             "status": "success",
-            "period": "2025",
+            "period": f"Last {days} days",
             "client_id": client_id,
             "date_range": {
                 "start_date": str(start_date),
                 "end_date": str(end_date)
             },
             "total_ads": len(ads_2025),
-            "ads": ads_2025
+            "ads": ads_2025,
+            "note": "Optimized for Railway Pro - use smaller date ranges for better performance"
         }
 
     except Exception as e:
