@@ -68,7 +68,7 @@ class MetaService:
                         'level': 'campaign',
                         'filtering': [
                             {
-                                'field': 'spend',
+                                'field': 'campaign.spend',
                                 'operator': 'GREATER_THAN',
                                 'value': 0
                             }
@@ -212,7 +212,7 @@ class MetaService:
                         'level': 'ad',
                         'filtering': [
                             {
-                                'field': 'spend',
+                                'field': 'ad.spend',
                                 'operator': 'GREATER_THAN',
                                 'value': 0
                             }
@@ -379,7 +379,7 @@ class MetaService:
                 'limit': limit * 2,  # Fetch more to account for filtering
                 'filtering': [
                     {
-                        'field': 'spend',
+                        'field': 'ad.spend',
                         'operator': 'GREATER_THAN',
                         'value': 0  # Only ads with spend > 0
                     }
@@ -636,7 +636,7 @@ class MetaService:
                 'limit': limit * 2,  # Fetch more to account for filtering
                 'filtering': [
                     {
-                        'field': 'spend',
+                        'field': 'campaign.spend',
                         'operator': 'GREATER_THAN',
                         'value': 0  # Only campaigns with spend > 0
                     }

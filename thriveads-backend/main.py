@@ -1497,6 +1497,7 @@ async def test_meta_api_simple():
         end_date = date.today()
         start_date = end_date - timedelta(days=30)
 
+        # Use correct filtering syntax with campaign.spend
         insights = account.get_insights(
             fields=['campaign_id', 'campaign_name', 'spend'],
             params={
@@ -1505,12 +1506,12 @@ async def test_meta_api_simple():
                     'until': end_date.strftime('%Y-%m-%d')
                 },
                 'level': 'campaign',
-                'limit': 10,  # Just first 10 campaigns with spend
+                'limit': 20,  # Get campaigns with spend
                 'filtering': [
                     {
-                        'field': 'spend',
+                        'field': 'campaign.spend',
                         'operator': 'GREATER_THAN',
-                        'value': 0  # Only campaigns that have actually spent money
+                        'value': 0
                     }
                 ]
             }
@@ -1518,12 +1519,16 @@ async def test_meta_api_simple():
 
         campaign_list = []
         for insight in insights:
+            spend = float(insight.get('spend', 0))
             campaign_list.append({
                 'id': insight.get('campaign_id'),
                 'name': insight.get('campaign_name'),
-                'spend': insight.get('spend', 0),
+                'spend': spend,
                 'status': 'active_with_spend'  # These campaigns have recent spend
             })
+
+        # Limit to 10 campaigns with spend
+        campaign_list = campaign_list[:10]
 
 
 
