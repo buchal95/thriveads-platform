@@ -1467,7 +1467,7 @@ async def test_meta_api_data():
 
 @app.post("/test-meta-api-simple")
 async def test_meta_api_simple():
-    """Test Meta API with minimal data request (just campaign list, no metrics)"""
+    """Test Meta API with minimal data request (ACTIVE campaigns only)"""
     try:
         from facebook_business.api import FacebookAdsApi
         from facebook_business.adobjects.adaccount import AdAccount
@@ -1488,10 +1488,19 @@ async def test_meta_api_simple():
         # Get account
         account = AdAccount(f"act_{settings.DEFAULT_CLIENT_ID}")
 
-        # Get just campaign list (no metrics, no date filtering)
+        # Get campaigns with spend > 0 (eliminates old unused campaigns)
         campaigns = account.get_campaigns(
             fields=['id', 'name', 'status'],  # Minimal fields
-            params={'limit': 10}  # Just first 10 campaigns
+            params={
+                'limit': 10,  # Just first 10 campaigns
+                'filtering': [
+                    {
+                        'field': 'spend',
+                        'operator': 'GREATER_THAN',
+                        'value': 0  # Only campaigns that have actually spent money
+                    }
+                ]
+            }
         )
 
         campaign_list = []
@@ -1507,7 +1516,7 @@ async def test_meta_api_simple():
             "message": "Meta API simple test successful",
             "campaigns_found": len(campaign_list),
             "campaigns": campaign_list,
-            "note": "No metrics requested - just basic campaign info"
+            "note": "Only campaigns with spend > 0 requested - no metrics, no unused campaigns"
         }
 
     except Exception as e:

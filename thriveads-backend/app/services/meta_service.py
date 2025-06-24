@@ -38,9 +38,10 @@ class MetaService:
         client_id: str,
         start_date: date,
         end_date: date,
-        fields: List[str] = None
+        fields: List[str] = None,
+        active_only: bool = True
     ) -> List[Dict[str, Any]]:
-        """Get all campaigns with metrics for a date range"""
+        """Get campaigns with metrics for a date range"""
         try:
             if fields is None:
                 fields = [
@@ -51,8 +52,22 @@ class MetaService:
 
             account = AdAccount(f"act_{client_id}")
 
-            # Get campaigns
-            campaigns = account.get_campaigns(fields=['id', 'name', 'status', 'objective'])
+            # Get campaigns with filtering for performance
+            campaign_params = {}
+            if active_only:
+                # Only get campaigns with spend > 0 to avoid fetching thousands of unused campaigns
+                campaign_params['filtering'] = [
+                    {
+                        'field': 'spend',
+                        'operator': 'GREATER_THAN',
+                        'value': 0  # Only campaigns that have actually spent money
+                    }
+                ]
+
+            campaigns = account.get_campaigns(
+                fields=['id', 'name', 'status', 'objective'],
+                params=campaign_params
+            )
 
             campaigns_data = []
             for campaign in campaigns:
@@ -117,9 +132,10 @@ class MetaService:
         client_id: str,
         start_date: date,
         end_date: date,
-        fields: List[str] = None
+        fields: List[str] = None,
+        active_only: bool = True
     ) -> List[Dict[str, Any]]:
-        """Get all ads with metrics for a date range"""
+        """Get ads with metrics for a date range"""
         try:
             if fields is None:
                 fields = [
@@ -131,8 +147,22 @@ class MetaService:
 
             account = AdAccount(f"act_{client_id}")
 
-            # Get ads
-            ads = account.get_ads(fields=['id', 'name', 'status', 'campaign_id'])
+            # Get ads with filtering for performance
+            ad_params = {}
+            if active_only:
+                # Only get ads with spend > 0 to avoid fetching thousands of unused ads
+                ad_params['filtering'] = [
+                    {
+                        'field': 'spend',
+                        'operator': 'GREATER_THAN',
+                        'value': 0  # Only ads that have actually spent money
+                    }
+                ]
+
+            ads = account.get_ads(
+                fields=['id', 'name', 'status', 'campaign_id'],
+                params=ad_params
+            )
 
             ads_data = []
             for ad in ads:
@@ -243,6 +273,13 @@ class MetaService:
                 'level': 'ad',
                 'breakdowns': [],
                 'limit': limit * 2,  # Fetch more to account for filtering
+                'filtering': [
+                    {
+                        'field': 'spend',
+                        'operator': 'GREATER_THAN',
+                        'value': 0  # Only ads with spend > 0
+                    }
+                ]
             }
             
             # Set attribution window based on parameter
@@ -493,6 +530,13 @@ class MetaService:
                 'level': 'campaign',
                 'breakdowns': [],
                 'limit': limit * 2,  # Fetch more to account for filtering
+                'filtering': [
+                    {
+                        'field': 'spend',
+                        'operator': 'GREATER_THAN',
+                        'value': 0  # Only campaigns with spend > 0
+                    }
+                ]
             }
 
             # Set attribution window based on parameter
