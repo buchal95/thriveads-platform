@@ -132,9 +132,14 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
+    import os
+
+    # Get port from environment variable (Railway sets this) or default to 8000
+    port = int(os.getenv("PORT", 8000))
+
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=port,
         reload=settings.ENVIRONMENT == "development"
     )
