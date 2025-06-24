@@ -6,12 +6,13 @@ const nextConfig: NextConfig = {
     // Ensure webpack resolves the @ alias properly
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@': path.resolve(__dirname, 'src'),
-      '@/components': path.resolve(__dirname, 'src/components'),
-      '@/lib': path.resolve(__dirname, 'src/lib'),
-      '@/data': path.resolve(__dirname, 'src/data'),
-      '@/types': path.resolve(__dirname, 'src/types'),
-      '@/services': path.resolve(__dirname, 'src/services'),
+      '@': path.resolve(__dirname, './src'),
+      '@/components': path.resolve(__dirname, './src/components'),
+      '@/lib': path.resolve(__dirname, './src/lib'),
+      '@/data': path.resolve(__dirname, './src/data'),
+      '@/types': path.resolve(__dirname, './src/types'),
+      '@/services': path.resolve(__dirname, './src/services'),
+      '@/config': path.resolve(__dirname, './src/config'),
     };
     return config;
   },

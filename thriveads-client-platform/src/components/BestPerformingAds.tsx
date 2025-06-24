@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ExternalLink, Eye, TrendingUp, Award, RefreshCw } from 'lucide-react';
 import { AdData } from '@/types/meta-ads';
-import { formatCurrency, formatROAS, formatNumber, formatCTR, cn } from '../lib/utils';
+import { formatCurrency, formatROAS, formatNumber, formatCTR, cn } from '@/lib/utils';
 import { apiService, type Ad } from '@/services/api';
 
 interface BestPerformingAdsProps {
