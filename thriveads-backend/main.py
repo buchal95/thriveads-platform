@@ -405,9 +405,270 @@ async def sync_2025_quick():
         }
 
 
+@app.post("/sync-2025-monthly")
+async def sync_2025_monthly():
+    """Download 2025 data in MONTHLY BATCHES (fastest, least API calls)"""
+    try:
+        from datetime import date, timedelta
+        from app.services.meta_service import MetaService
+        from app.core.database import get_session_local
+        from app.models.campaign import Campaign
+        from app.models.ad import Ad
+        from app.models.client import Client
+
+        if not settings.META_ACCESS_TOKEN:
+            return {
+                "status": "error",
+                "message": "META_ACCESS_TOKEN not configured"
+            }
+
+        # Just get January 2025 data (since we're still in January)
+        start_date = date(2025, 1, 1)
+        yesterday = date.today() - timedelta(days=1)
+        end_date = min(yesterday, date(2025, 1, 31))  # End of January or yesterday
+
+        meta_service = MetaService()
+        SessionLocal = get_session_local()
+        db = SessionLocal()
+
+        try:
+            # Ensure client exists
+            client = db.query(Client).filter(Client.id == settings.DEFAULT_CLIENT_ID).first()
+            if not client:
+                client = Client(
+                    id=settings.DEFAULT_CLIENT_ID,
+                    name="Mimilátky - Notie s.r.o.",
+                    currency="CZK",
+                    meta_ad_account_id=settings.DEFAULT_CLIENT_ID
+                )
+                db.add(client)
+                db.commit()
+
+            # Get ALL January 2025 data in ONE API call
+            campaigns_data = await meta_service.get_campaigns_with_metrics(
+                client_id=settings.DEFAULT_CLIENT_ID,
+                start_date=start_date,
+                end_date=end_date
+            )
+
+            ads_data = await meta_service.get_ads_with_metrics(
+                client_id=settings.DEFAULT_CLIENT_ID,
+                start_date=start_date,
+                end_date=end_date
+            )
+
+            campaigns_stored = 0
+            ads_stored = 0
+
+            # Store campaigns
+            for campaign_data in campaigns_data:
+                campaign = db.query(Campaign).filter(Campaign.id == campaign_data['campaign_id']).first()
+                if not campaign:
+                    campaign = Campaign(
+                        id=campaign_data['campaign_id'],
+                        name=campaign_data['campaign_name'],
+                        status=campaign_data['status'],
+                        objective=campaign_data.get('objective'),
+                        client_id=settings.DEFAULT_CLIENT_ID
+                    )
+                    db.add(campaign)
+                    campaigns_stored += 1
+                else:
+                    campaign.name = campaign_data['campaign_name']
+                    campaign.status = campaign_data['status']
+                    campaign.objective = campaign_data.get('objective')
+
+            # Store ads
+            for ad_data in ads_data:
+                ad = db.query(Ad).filter(Ad.id == ad_data['ad_id']).first()
+                if not ad:
+                    ad = Ad(
+                        id=ad_data['ad_id'],
+                        name=ad_data['ad_name'],
+                        status=ad_data['status'],
+                        campaign_id=ad_data['campaign_id'],
+                        client_id=settings.DEFAULT_CLIENT_ID
+                    )
+                    db.add(ad)
+                    ads_stored += 1
+                else:
+                    ad.name = ad_data['ad_name']
+                    ad.status = ad_data['status']
+
+            db.commit()
+
+            return {
+                "status": "success",
+                "message": f"Successfully synced January 2025 data in ONE API call",
+                "processing": {
+                    "method": "monthly_batch",
+                    "api_calls": 2,  # Just campaigns + ads
+                    "date_range": f"{start_date} to {end_date}",
+                    "days_covered": (end_date - start_date).days + 1
+                },
+                "stored_in_database": {
+                    "campaigns_stored": campaigns_stored,
+                    "ads_stored": ads_stored,
+                    "total_campaigns": len(campaigns_data),
+                    "total_ads": len(ads_data)
+                },
+                "note": "Fast monthly aggregation. Use daily sync for ongoing day-by-day metrics."
+            }
+
+        finally:
+            db.close()
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to sync monthly data: {str(e)}"
+        }
+
+
+@app.post("/sync-2025-data-batched")
+async def sync_2025_batched():
+    """Download 2025 data in WEEKLY BATCHES (much faster, avoids timeouts)"""
+    try:
+        from datetime import date, timedelta
+        from app.services.meta_service import MetaService
+        from app.core.database import get_session_local
+        from app.models.campaign import Campaign
+        from app.models.ad import Ad
+        from app.models.metrics import CampaignMetrics, AdMetrics
+        from app.models.client import Client
+
+        if not settings.META_ACCESS_TOKEN:
+            return {
+                "status": "error",
+                "message": "META_ACCESS_TOKEN not configured"
+            }
+
+        # Define 2025 date range (up to yesterday)
+        start_date = date(2025, 1, 1)
+        yesterday = date.today() - timedelta(days=1)
+        end_date = min(yesterday, date(2025, 12, 31))
+
+        if start_date > end_date:
+            return {
+                "status": "error",
+                "message": f"No 2025 data available yet. Start date: {start_date}, End date: {end_date}"
+            }
+
+        meta_service = MetaService()
+        SessionLocal = get_session_local()
+        db = SessionLocal()
+
+        try:
+            # Ensure client exists
+            client = db.query(Client).filter(Client.id == settings.DEFAULT_CLIENT_ID).first()
+            if not client:
+                client = Client(
+                    id=settings.DEFAULT_CLIENT_ID,
+                    name="Mimilátky - Notie s.r.o.",
+                    currency="CZK",
+                    meta_ad_account_id=settings.DEFAULT_CLIENT_ID
+                )
+                db.add(client)
+                db.commit()
+
+            # Process in WEEKLY BATCHES (7 days at a time)
+            batch_size = 7  # 7 days per batch
+            batches_processed = 0
+            campaigns_stored = 0
+            ads_stored = 0
+
+            current_start = start_date
+            while current_start <= end_date:
+                batch_end = min(current_start + timedelta(days=batch_size - 1), end_date)
+
+                try:
+                    # Get campaigns data for this WEEK
+                    campaigns_data = await meta_service.get_campaigns_with_metrics(
+                        client_id=settings.DEFAULT_CLIENT_ID,
+                        start_date=current_start,
+                        end_date=batch_end
+                    )
+
+                    # Get ads data for this WEEK
+                    ads_data = await meta_service.get_ads_with_metrics(
+                        client_id=settings.DEFAULT_CLIENT_ID,
+                        start_date=current_start,
+                        end_date=batch_end
+                    )
+
+                    # Store campaigns (UPSERT - no duplicates)
+                    for campaign_data in campaigns_data:
+                        campaign = db.query(Campaign).filter(Campaign.id == campaign_data['campaign_id']).first()
+                        if not campaign:
+                            campaign = Campaign(
+                                id=campaign_data['campaign_id'],
+                                name=campaign_data['campaign_name'],
+                                status=campaign_data['status'],
+                                objective=campaign_data.get('objective'),
+                                client_id=settings.DEFAULT_CLIENT_ID
+                            )
+                            db.add(campaign)
+                            campaigns_stored += 1
+                        else:
+                            campaign.name = campaign_data['campaign_name']
+                            campaign.status = campaign_data['status']
+                            campaign.objective = campaign_data.get('objective')
+
+                    # Store ads (UPSERT - no duplicates)
+                    for ad_data in ads_data:
+                        ad = db.query(Ad).filter(Ad.id == ad_data['ad_id']).first()
+                        if not ad:
+                            ad = Ad(
+                                id=ad_data['ad_id'],
+                                name=ad_data['ad_name'],
+                                status=ad_data['status'],
+                                campaign_id=ad_data['campaign_id'],
+                                client_id=settings.DEFAULT_CLIENT_ID
+                            )
+                            db.add(ad)
+                            ads_stored += 1
+                        else:
+                            ad.name = ad_data['ad_name']
+                            ad.status = ad_data['status']
+
+                    batches_processed += 1
+                    db.commit()  # Commit after each batch
+
+                except Exception as batch_error:
+                    print(f"Error processing batch {current_start} to {batch_end}: {batch_error}")
+
+                # Move to next batch
+                current_start = batch_end + timedelta(days=1)
+
+            return {
+                "status": "success",
+                "message": f"Successfully synced 2025 data in WEEKLY BATCHES",
+                "processing": {
+                    "method": "weekly_batches",
+                    "batch_size_days": batch_size,
+                    "batches_processed": batches_processed,
+                    "date_range": f"{start_date} to {end_date}"
+                },
+                "stored_in_database": {
+                    "campaigns_stored": campaigns_stored,
+                    "ads_stored": ads_stored
+                },
+                "note": "Data aggregated by week. Use daily sync for day-by-day metrics going forward."
+            }
+
+        finally:
+            db.close()
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to sync 2025 data: {str(e)}"
+        }
+
+
 @app.post("/sync-2025-data")
 async def sync_2025_historical_data():
-    """Download and store ALL 2025 data DAY-BY-DAY (up to yesterday) in database"""
+    """Download and store ALL 2025 data DAY-BY-DAY (up to yesterday) in database - SLOW VERSION"""
     try:
         from datetime import date, timedelta
         from app.services.meta_service import MetaService
