@@ -1366,6 +1366,105 @@ async def sync_single_day():
         }
 
 
+@app.post("/test-database-write")
+async def test_database_write():
+    """Test minimal database write operation"""
+    try:
+        from app.core.database import get_session_local
+        from app.models.client import Client
+        import uuid
+
+        SessionLocal = get_session_local()
+        db = SessionLocal()
+
+        try:
+            # Test 1: Simple read
+            existing_clients = db.query(Client).count()
+
+            # Test 2: Simple write (create a test client)
+            test_client_id = f"test_{uuid.uuid4().hex[:8]}"
+            test_client = Client(
+                id=test_client_id,
+                name="Test Client",
+                currency="CZK",
+                meta_ad_account_id=test_client_id
+            )
+
+            db.add(test_client)
+            db.commit()
+
+            # Test 3: Verify write
+            new_count = db.query(Client).count()
+
+            # Test 4: Clean up (delete test client)
+            db.delete(test_client)
+            db.commit()
+
+            final_count = db.query(Client).count()
+
+            return {
+                "status": "success",
+                "message": "Database write test successful",
+                "test_results": {
+                    "initial_clients": existing_clients,
+                    "after_insert": new_count,
+                    "after_delete": final_count,
+                    "write_operations": "CREATE, COMMIT, DELETE successful"
+                }
+            }
+
+        finally:
+            db.close()
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Database write test failed: {str(e)}",
+            "error_type": type(e).__name__
+        }
+
+
+@app.post("/test-meta-api-data")
+async def test_meta_api_data():
+    """Test Meta API data retrieval without database operations"""
+    try:
+        from datetime import date, timedelta
+        from app.services.meta_service import MetaService
+
+        if not settings.META_ACCESS_TOKEN:
+            return {
+                "status": "error",
+                "message": "META_ACCESS_TOKEN not configured"
+            }
+
+        # Test with just June 20, 2025
+        test_date = date(2025, 6, 20)
+        meta_service = MetaService()
+
+        # Get campaigns data (no database operations)
+        campaigns_data = await meta_service.get_campaigns_with_metrics(
+            client_id=settings.DEFAULT_CLIENT_ID,
+            start_date=test_date,
+            end_date=test_date
+        )
+
+        return {
+            "status": "success",
+            "message": "Meta API data retrieval successful",
+            "test_date": str(test_date),
+            "campaigns_found": len(campaigns_data),
+            "sample_campaign": campaigns_data[0] if campaigns_data else None,
+            "note": "No database operations performed - just API data retrieval"
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Meta API data test failed: {str(e)}",
+            "error_type": type(e).__name__
+        }
+
+
 if __name__ == "__main__":
     import uvicorn
     import os
