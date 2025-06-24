@@ -543,10 +543,12 @@ async def backfill_2025_daily():
                 "message": "META_ACCESS_TOKEN not configured"
             }
 
-        # Define 2025 date range (up to yesterday)
+        # Define 2025 date range (January 1 to yesterday - June 23, 2025)
         start_date = date(2025, 1, 1)
-        yesterday = date.today() - timedelta(days=1)
+        yesterday = date.today() - timedelta(days=1)  # June 23, 2025
         end_date = min(yesterday, date(2025, 12, 31))
+
+        total_days = (end_date - start_date).days + 1
 
         if start_date > end_date:
             return {
@@ -571,8 +573,9 @@ async def backfill_2025_daily():
                 db.add(client)
                 db.commit()
 
-            # Process in SMALL CHUNKS (3 days at a time) for daily granularity
-            chunk_size = 3  # 3 days per chunk to avoid timeouts
+            # Process in WEEKLY CHUNKS (7 days at a time) for daily granularity
+            # With ~175 days (Jan-June), this will be ~25 chunks instead of ~58 chunks
+            chunk_size = 7  # 7 days per chunk - good balance of speed vs granularity
             chunks_processed = 0
             campaigns_stored = 0
             ads_stored = 0
@@ -687,6 +690,10 @@ async def backfill_2025_daily():
 
                     chunks_processed += 1
                     db.commit()  # Commit after each chunk
+
+                    # Progress logging for long backfill
+                    progress_pct = (chunks_processed * chunk_size / total_days) * 100
+                    print(f"Backfill progress: {chunks_processed} chunks processed ({progress_pct:.1f}% complete)")
 
                 except Exception as chunk_error:
                     print(f"Error processing chunk {current_start} to {chunk_end}: {chunk_error}")
