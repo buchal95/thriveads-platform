@@ -87,17 +87,11 @@ async def get_top_performing_ads(
         # Calculate date range
         end_date = datetime.now().date()
         if period == "last_week":
-            # Get last complete week (Monday to Sunday)
-            days_since_monday = end_date.weekday()
-            last_monday = end_date - timedelta(days=days_since_monday + 7)
-            start_date = last_monday
-            end_date = last_monday + timedelta(days=6)
+            # Use last 7 days (same as 2025-data endpoint for consistency)
+            start_date = end_date - timedelta(days=7)
         elif period == "last_month":
-            # Get last complete month
-            first_day_current_month = end_date.replace(day=1)
-            last_day_previous_month = first_day_current_month - timedelta(days=1)
-            start_date = last_day_previous_month.replace(day=1)
-            end_date = last_day_previous_month
+            # Use last 30 days
+            start_date = end_date - timedelta(days=30)
         else:
             raise HTTPException(status_code=400, detail="Invalid period")
         
