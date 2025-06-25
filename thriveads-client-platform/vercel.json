@@ -5,6 +5,7 @@
   "framework": "nextjs",
   "regions": ["fra1"],
 
+
   "functions": {
     "app/**/*.js": {
       "maxDuration": 30
