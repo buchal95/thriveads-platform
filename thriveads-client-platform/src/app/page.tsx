@@ -64,6 +64,10 @@ export default function Dashboard() {
 
       const data = response.data;
 
+      if (!data) {
+        throw new Error('No data received from API');
+      }
+
       // Transform API response to match our ClientDashboardData structure
       const transformedData: ClientDashboardData = {
         client_id: data.client_id,
