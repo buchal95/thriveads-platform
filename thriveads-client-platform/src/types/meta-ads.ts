@@ -184,11 +184,7 @@ export interface ClientDashboardData {
   };
 }
 
-export interface MetricChange {
-  value: number;
-  percentage: number;
-  trend: 'up' | 'down' | 'neutral';
-}
+
 
 export interface MetricCardData {
   label: string;

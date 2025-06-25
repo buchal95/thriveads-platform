@@ -143,7 +143,12 @@ const mockDailyMetrics: DailyMetrics[] = [
       conversion_rate: 0.088,
       cost_per_conversion: 16.77,
       roas: 4.5,
+      roas_7d_click: 4.2,
       return_on_ad_spend: 4.5,
+      purchases: {
+        default: { count: 67, value: 5055.25 },
+        '7d_click': { count: 63, value: 4716.60 }
+      },
       post_engagement: 1234,
       engagement_rate: 0.0079
     }
@@ -165,7 +170,12 @@ const mockDailyMetrics: DailyMetrics[] = [
       conversion_rate: 0.083,
       cost_per_conversion: 18.75,
       roas: 4.2,
+      roas_7d_click: 3.9,
       return_on_ad_spend: 4.2,
+      purchases: {
+        default: { count: 58, value: 4347.50 },
+        '7d_click': { count: 54, value: 4050.00 }
+      },
       post_engagement: 1156,
       engagement_rate: 0.0079
     }
@@ -193,7 +203,12 @@ const mockWeeklyMetrics: WeeklyMetrics[] = [
       conversion_rate: 0.076,
       cost_per_conversion: 19.85,
       roas: 4.1,
+      roas_7d_click: 3.7,
       return_on_ad_spend: 4.1,
+      purchases: {
+        default: { count: 342, value: 25620.00 },
+        '7d_click': { count: 318, value: 23850.00 }
+      },
       post_engagement: 7654,
       engagement_rate: 0.0078
     }

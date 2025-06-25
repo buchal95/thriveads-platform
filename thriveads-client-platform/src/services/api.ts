@@ -206,19 +206,22 @@ class ApiService {
 
     try {
       // Fetch all required data in parallel
-      const promises = [
-        this.getTopCampaigns(period, 'default', 20),
-        this.getWeekComparison()
-      ];
+      const campaignsPromise = this.getTopCampaigns(period, 'default', 20);
+      const weekComparisonPromise = this.getWeekComparison();
 
-      // Add breakdown data based on period
+      // Get breakdown data based on period
+      let breakdownPromise: Promise<ApiResponse<DailyMetrics[]>> | Promise<ApiResponse<WeeklyMetrics[]>>;
       if (period === 'last_week') {
-        promises.push(this.getDailyBreakdown(period));
+        breakdownPromise = this.getDailyBreakdown(period);
       } else {
-        promises.push(this.getWeeklyBreakdown(4));
+        breakdownPromise = this.getWeeklyBreakdown(4);
       }
 
-      const [campaignsResponse, weekComparisonResponse, breakdownResponse] = await Promise.all(promises);
+      const [campaignsResponse, weekComparisonResponse, breakdownResponse] = await Promise.all([
+        campaignsPromise,
+        weekComparisonPromise,
+        breakdownPromise
+      ]);
 
       if (campaignsResponse.error) {
         return campaignsResponse;

@@ -111,23 +111,23 @@ export function WeekComparison({ className }: WeekComparisonProps) {
       const apiData = response.data!;
       const convertedData: WeekComparisonType = {
         current_week: {
-          period: apiData.current_week.period,
           date_range: { since: '', until: '' }, // API doesn't provide this
-          metrics: apiData.current_week.metrics
+          summary: apiData.current_week.metrics as any
         },
         previous_week: {
-          period: apiData.previous_week.period,
           date_range: { since: '', until: '' }, // API doesn't provide this
-          metrics: apiData.previous_week.metrics
+          summary: apiData.previous_week.metrics as any
         },
         changes: Object.entries(apiData.changes).reduce((acc, [key, value]) => {
           acc[key] = {
-            absolute: value.absolute,
-            percentage: value.percentage,
+            current: 0,
+            previous: 0,
+            absolute_change: value.absolute,
+            percentage_change: value.percentage,
             trend: value.percentage > 0 ? 'up' : value.percentage < 0 ? 'down' : 'neutral'
           } as MetricChange;
           return acc;
-        }, {} as Record<string, MetricChange>)
+        }, {} as any)
       };
 
       setComparison(convertedData);

@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState<ClientDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
   // Client-safe date formatter to avoid hydration issues
   const formatLastUpdated = (dateString: string) => {
     // Use a consistent format that works the same on server and client
@@ -396,10 +397,10 @@ export default function Dashboard() {
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {selectedPeriod === 'last_week' && currentData.daily_breakdown && (
+          {selectedPeriod === 'last_week' && 'daily_breakdown' in currentData && currentData.daily_breakdown && (
             <SpendTrendChart data={currentData.daily_breakdown} />
           )}
-          {selectedPeriod === 'last_month' && currentData.weekly_breakdown && (
+          {selectedPeriod === 'last_month' && 'weekly_breakdown' in currentData && currentData.weekly_breakdown && (
             <WeeklySpendTrendChart data={currentData.weekly_breakdown} />
           )}
           <CampaignPerformanceChart campaigns={currentData.campaigns} />
@@ -419,8 +420,8 @@ export default function Dashboard() {
         {/* Attribution Comparison */}
         <AttributionComparison
           purchases={{
-            default: { count: currentData.summary.conversions, value: currentData.summary.conversion_value },
-            '7d_click': { count: currentData.summary.conversions, value: currentData.summary.conversion_value }
+            default: { count: currentData.summary.purchases.default.count, value: currentData.summary.purchases.default.value },
+            '7d_click': { count: currentData.summary.purchases['7d_click'].count, value: currentData.summary.purchases['7d_click'].value }
           }}
           spend={currentData.summary.spend}
           roasDefault={currentData.summary.roas}
