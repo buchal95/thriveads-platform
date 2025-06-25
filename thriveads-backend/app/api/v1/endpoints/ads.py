@@ -11,6 +11,7 @@ from app.core.database import get_db
 from app.schemas.ad import Ad, AdPerformance
 from app.services.meta_service import MetaService
 from app.services.ad_service import AdService
+from app.services.database_service import DatabaseService
 
 router = APIRouter()
 
@@ -81,9 +82,8 @@ async def get_top_performing_ads(
     with clickable Facebook feed URLs and performance metrics.
     """
     try:
-        meta_service = MetaService()
-        ad_service = AdService(db)
-        
+        db_service = DatabaseService(db)
+
         # Calculate date range
         end_date = datetime.now().date()
         if period == "last_week":
@@ -94,60 +94,15 @@ async def get_top_performing_ads(
             start_date = end_date - timedelta(days=30)
         else:
             raise HTTPException(status_code=400, detail="Invalid period")
-        
-        # Use the working get_ads_with_metrics method and then sort by ROAS
-        ads_data = await meta_service.get_ads_with_metrics(
+
+        # Get top performing ads from database
+        top_ads = db_service.get_top_performing_ads(
             client_id=client_id,
             start_date=start_date,
             end_date=end_date,
-            fields=[
-                'ad_id', 'ad_name', 'campaign_id', 'campaign_name', 'spend',
-                'impressions', 'clicks', 'actions', 'cpm', 'cpc', 'ctr',
-                'frequency', 'reach'
-            ],
-            active_only=True
+            attribution=attribution,
+            limit=limit
         )
-
-        # Calculate ROAS and sort by it
-        for ad in ads_data:
-            # Extract conversions and conversion value from actions
-            conversions = ad.get('conversions', 0)
-            spend = ad.get('spend', 0)
-
-            # For now, estimate conversion value (this should be improved)
-            estimated_conversion_value = conversions * 400  # Estimate 400 CZK per conversion
-            roas = estimated_conversion_value / spend if spend > 0 else 0
-            ad['roas'] = roas
-
-        # Sort by ROAS and take top performers
-        ads_data.sort(key=lambda x: x.get('roas', 0), reverse=True)
-        top_ads = ads_data[:limit]
-
-        # Convert to the format expected by frontend
-        formatted_ads = []
-        for ad in top_ads:
-            ad_id = ad.get('ad_id')
-            formatted_ad = {
-                "id": ad_id,
-                "name": ad.get('ad_name'),
-                "status": ad.get('status', 'active'),
-                "campaign_name": ad.get('campaign_name'),
-                "facebook_url": f"https://www.facebook.com/ads/library/?id={ad_id}&search_type=all&media_type=all",
-                "metrics": {
-                    "impressions": ad.get('impressions', 0),
-                    "clicks": ad.get('clicks', 0),
-                    "spend": ad.get('spend', 0),
-                    "conversions": ad.get('conversions', 0),
-                    "ctr": ad.get('ctr', 0),
-                    "cpc": ad.get('cpc', 0),
-                    "cpm": ad.get('cpm', 0),
-                    "roas": ad.get('roas', 0),
-                    "frequency": ad.get('frequency', 0)
-                },
-                "currency": "CZK",
-                "attribution": attribution
-            }
-            formatted_ads.append(formatted_ad)
 
         # Return structured response that matches frontend expectations
         return {
@@ -155,8 +110,8 @@ async def get_top_performing_ads(
             "period": period,
             "client_id": client_id,
             "attribution": attribution,
-            "total_ads": len(formatted_ads),
-            "ads": formatted_ads
+            "total_ads": len(top_ads),
+            "ads": top_ads
         }
         
     except Exception as e:

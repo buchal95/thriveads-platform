@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 
 from app.core.database import get_db
 from app.services.meta_service import MetaService
+from app.services.database_service import DatabaseService
 
 router = APIRouter()
 
@@ -45,9 +46,9 @@ async def get_conversion_funnel(
         else:
             raise HTTPException(status_code=400, detail="Invalid period")
         
-        # Fetch conversion funnel data from Meta API
-        meta_service = MetaService()
-        funnel_data = await meta_service.get_conversion_funnel(
+        # Get conversion funnel data from database
+        db_service = DatabaseService(db)
+        funnel_data = db_service.get_conversion_funnel(
             client_id=client_id,
             start_date=start_date,
             end_date=end_date
@@ -101,9 +102,9 @@ async def get_week_on_week_comparison(
             previous_week_start = current_week_start - timedelta(days=7)
             previous_week_end = current_week_start - timedelta(days=1)
         
-        # Fetch week-on-week comparison data
-        meta_service = MetaService()
-        comparison_data = await meta_service.get_week_on_week_comparison(
+        # Get week-on-week comparison data from database
+        db_service = DatabaseService(db)
+        comparison_data = db_service.get_week_on_week_comparison(
             client_id=client_id,
             current_week_start=current_week_start,
             current_week_end=current_week_end,
@@ -142,9 +143,9 @@ async def get_daily_breakdown(
         else:
             raise HTTPException(status_code=400, detail="Invalid period. Use 'last_week' or 'last_month'")
 
-        # Fetch daily breakdown data from Meta API
-        meta_service = MetaService()
-        daily_data = await meta_service.get_daily_breakdown(
+        # Get daily breakdown data from database
+        db_service = DatabaseService(db)
+        daily_data = db_service.get_daily_breakdown(
             client_id=client_id,
             start_date=start_date,
             end_date=end_date

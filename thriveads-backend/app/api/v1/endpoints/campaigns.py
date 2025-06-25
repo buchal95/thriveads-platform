@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 
 from app.core.database import get_db
 from app.services.meta_service import MetaService
+from app.services.database_service import DatabaseService
 
 router = APIRouter()
 
@@ -77,25 +78,21 @@ async def get_top_performing_campaigns(
     Similar to ads endpoint but aggregated at campaign level
     """
     try:
-        meta_service = MetaService()
-        
+        db_service = DatabaseService(db)
+
         # Calculate date range
         end_date = datetime.now().date()
         if period == "last_week":
-            days_since_monday = end_date.weekday()
-            last_monday = end_date - timedelta(days=days_since_monday + 7)
-            start_date = last_monday
-            end_date = last_monday + timedelta(days=6)
+            # Use last 7 days (consistent with ads endpoint)
+            start_date = end_date - timedelta(days=7)
         elif period == "last_month":
-            first_day_current_month = end_date.replace(day=1)
-            last_day_previous_month = first_day_current_month - timedelta(days=1)
-            start_date = last_day_previous_month.replace(day=1)
-            end_date = last_day_previous_month
+            # Use last 30 days
+            start_date = end_date - timedelta(days=30)
         else:
             raise HTTPException(status_code=400, detail="Invalid period")
-        
-        # Fetch top performing campaigns from Meta API
-        top_campaigns = await meta_service.get_top_performing_campaigns(
+
+        # Get top performing campaigns from database
+        top_campaigns = db_service.get_top_performing_campaigns(
             client_id=client_id,
             start_date=start_date,
             end_date=end_date,
