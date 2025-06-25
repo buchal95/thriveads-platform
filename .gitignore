@@ -113,7 +113,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/ removed - we want all lib directories in git for deployments
 lib64/
 parts/
 sdist/
