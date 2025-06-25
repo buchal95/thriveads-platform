@@ -71,7 +71,7 @@ export interface CampaignData {
   objective: string;
   created_time: string;
   updated_time: string;
-  metrics: MetaAdMetrics;
+  metrics: CampaignMetrics;
 }
 
 export interface AdSetData {
@@ -89,7 +89,7 @@ export interface AdSetData {
       cities?: Array<{ key: string; name: string; region_id?: string }>;
     };
   };
-  metrics: MetaAdMetrics;
+  metrics: CampaignMetrics;
 }
 
 export interface AdData {
@@ -119,7 +119,7 @@ export interface AdData {
     };
   };
   facebook_url: string; // Direct link to Facebook ad
-  metrics: MetaAdMetrics;
+  metrics: CampaignMetrics;
 }
 
 // Week-on-week comparison types
@@ -134,11 +134,11 @@ export interface MetricChange {
 export interface WeekComparison {
   current_week: {
     date_range: DateRange;
-    summary: MetaAdMetrics;
+    summary: CampaignMetrics;
   };
   previous_week: {
     date_range: DateRange;
-    summary: MetaAdMetrics;
+    summary: CampaignMetrics;
   };
   changes: {
     spend: MetricChange;
@@ -159,40 +159,32 @@ export interface AccountInfo {
   account_status: number;
 }
 
-export interface DailyMetrics {
-  date: string;
-  metrics: MetaAdMetrics;
-}
-
-export interface WeeklyMetrics {
-  week_start: string;
-  week_end: string;
-  metrics: MetaAdMetrics;
-}
+// Import types from api service to avoid duplication
+import { CampaignMetrics, DailyMetrics, WeeklyMetrics } from '../services/api';
 
 export interface ClientDashboardData {
   client_id: string;
   client_name: string;
   ad_account_id: string;
   last_updated: string;
-  
+
   // Time period data
   last_week: {
     date_range: {
       since: string;
       until: string;
     };
-    summary: MetaAdMetrics;
+    summary: CampaignMetrics;
     campaigns: CampaignData[];
     daily_breakdown: DailyMetrics[];
   };
-  
+
   last_month: {
     date_range: {
       since: string;
       until: string;
     };
-    summary: MetaAdMetrics;
+    summary: CampaignMetrics;
     campaigns: CampaignData[];
     weekly_breakdown: WeeklyMetrics[];
   };
