@@ -448,3 +448,82 @@ async def backfill_single_day(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error backfilling single day: {str(e)}")
+
+
+@router.post("/populate-database")
+async def populate_database_with_working_data(
+    client_id: str = Query("513010266454814", description="Client Meta ad account ID"),
+    days: int = Query(7, description="Number of recent days to populate"),
+    db: Session = Depends(get_db)
+):
+    """
+    Populate database using the working Meta API methods
+
+    This uses the same API calls that work in /campaigns/2025-data endpoint
+    """
+    try:
+        from app.services.meta_service import MetaService
+        from app.models.campaign import Campaign
+        from app.models.client import Client
+        from datetime import datetime, timedelta
+
+        meta_service = MetaService()
+
+        # Calculate date range
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=days)
+
+        # Ensure client exists
+        client = db.query(Client).filter(Client.id == client_id).first()
+        if not client:
+            client = Client(
+                id=client_id,
+                name="Mimilátky - Notie s.r.o.",
+                currency="CZK",
+                meta_ad_account_id=client_id
+            )
+            db.add(client)
+            db.commit()
+
+        # Get campaigns data using the working method
+        campaigns_data = await meta_service.get_campaigns_with_metrics(
+            client_id=client_id,
+            start_date=start_date,
+            end_date=end_date,
+            active_only=True
+        )
+
+        campaigns_stored = 0
+        for campaign_data in campaigns_data:
+            # Store campaign in database
+            existing_campaign = db.query(Campaign).filter(Campaign.id == campaign_data['campaign_id']).first()
+
+            if not existing_campaign:
+                new_campaign = Campaign(
+                    id=campaign_data['campaign_id'],
+                    name=campaign_data['campaign_name'],
+                    status=campaign_data.get('status', 'ACTIVE'),
+                    objective=campaign_data.get('objective', 'CONVERSIONS'),
+                    client_id=client_id,
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow()
+                )
+                db.add(new_campaign)
+                campaigns_stored += 1
+
+        db.commit()
+
+        return {
+            "message": "Database populated successfully using working Meta API methods",
+            "client_id": client_id,
+            "date_range": {
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat()
+            },
+            "campaigns_found": len(campaigns_data),
+            "campaigns_stored": campaigns_stored,
+            "status": "success"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error populating database: {str(e)}")
