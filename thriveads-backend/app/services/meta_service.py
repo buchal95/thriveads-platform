@@ -402,7 +402,7 @@ class MetaService:
                     # Only include ads with spend > 0
                     if spend > 0:
                         ad_performance = self._process_ad_insight(insight, attribution)
-                        if ad_performance and ad_performance.metrics.roas > 0:
+                        if ad_performance:
                             top_ads.append(ad_performance)
                 except Exception as e:
                     logger.warning(f"Error processing ad insight: {e}")

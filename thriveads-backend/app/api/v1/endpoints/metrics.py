@@ -58,13 +58,7 @@ async def get_conversion_funnel(
             "status": "success",
             "period": period,
             "client_id": client_id,
-            "funnel_data": {
-                "impressions": funnel_data.get("funnel_stages", [{}])[0].get("count", 0) if funnel_data.get("funnel_stages") else 0,
-                "clicks": funnel_data.get("funnel_stages", [{}])[1].get("count", 0) if len(funnel_data.get("funnel_stages", [])) > 1 else 0,
-                "conversions": funnel_data.get("funnel_stages", [{}])[-1].get("count", 0) if funnel_data.get("funnel_stages") else 0,
-                "conversion_rate": funnel_data.get("funnel_stages", [{}])[-1].get("conversion_rate", 0) if funnel_data.get("funnel_stages") else 0,
-                "cost_per_conversion": 0  # Calculate if needed
-            }
+            "funnel_stages": funnel_data.get("funnel_stages", [])
         }
         
     except Exception as e:
