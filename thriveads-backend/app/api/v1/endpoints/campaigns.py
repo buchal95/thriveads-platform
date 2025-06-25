@@ -103,7 +103,15 @@ async def get_top_performing_campaigns(
             limit=limit
         )
 
-        return top_campaigns
+        # Return structured response that matches frontend expectations
+        return {
+            "status": "success",
+            "period": period,
+            "client_id": client_id,
+            "attribution": attribution,
+            "total_campaigns": len(top_campaigns),
+            "campaigns": top_campaigns
+        }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching campaigns: {str(e)}")

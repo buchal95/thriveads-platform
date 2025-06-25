@@ -53,7 +53,19 @@ async def get_conversion_funnel(
             end_date=end_date
         )
 
-        return funnel_data
+        # Return structured response that matches frontend expectations
+        return {
+            "status": "success",
+            "period": period,
+            "client_id": client_id,
+            "funnel_data": {
+                "impressions": funnel_data.get("funnel_stages", [{}])[0].get("count", 0) if funnel_data.get("funnel_stages") else 0,
+                "clicks": funnel_data.get("funnel_stages", [{}])[1].get("count", 0) if len(funnel_data.get("funnel_stages", [])) > 1 else 0,
+                "conversions": funnel_data.get("funnel_stages", [{}])[-1].get("count", 0) if funnel_data.get("funnel_stages") else 0,
+                "conversion_rate": funnel_data.get("funnel_stages", [{}])[-1].get("conversion_rate", 0) if funnel_data.get("funnel_stages") else 0,
+                "cost_per_conversion": 0  # Calculate if needed
+            }
+        }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching funnel data: {str(e)}")
@@ -62,25 +74,38 @@ async def get_conversion_funnel(
 @router.get("/week-on-week")
 async def get_week_on_week_comparison(
     client_id: str = Query(..., description="Client Meta ad account ID"),
+    complete_weeks: bool = Query(False, description="Use complete weeks only (last week vs week before)"),
     db: Session = Depends(get_db)
 ):
     """
     Get week-on-week metric comparisons
-    
-    Compares current week vs previous week performance
+
+    Compares current week vs previous week performance, or if complete_weeks=true,
+    compares last complete week vs the week before that
     """
     try:
         # Calculate current and previous week ranges
         today = datetime.now().date()
         days_since_monday = today.weekday()
-        
-        # Current week (Monday to today or Sunday if week is complete)
-        current_week_start = today - timedelta(days=days_since_monday)
-        current_week_end = today
-        
-        # Previous week (Monday to Sunday)
-        previous_week_start = current_week_start - timedelta(days=7)
-        previous_week_end = current_week_start - timedelta(days=1)
+
+        if complete_weeks:
+            # Use last complete week vs week before that
+            # Last complete week (Monday to Sunday)
+            last_monday = today - timedelta(days=days_since_monday + 7)
+            current_week_start = last_monday
+            current_week_end = last_monday + timedelta(days=6)  # Sunday
+
+            # Week before last complete week (Monday to Sunday)
+            previous_week_start = current_week_start - timedelta(days=7)
+            previous_week_end = current_week_start - timedelta(days=1)
+        else:
+            # Current week (Monday to today or Sunday if week is complete)
+            current_week_start = today - timedelta(days=days_since_monday)
+            current_week_end = today
+
+            # Previous week (Monday to Sunday)
+            previous_week_start = current_week_start - timedelta(days=7)
+            previous_week_end = current_week_start - timedelta(days=1)
         
         # Fetch week-on-week comparison data
         meta_service = MetaService()
@@ -131,7 +156,13 @@ async def get_daily_breakdown(
             end_date=end_date
         )
 
-        return daily_data
+        # Return structured response that matches frontend expectations
+        return {
+            "status": "success",
+            "period": period,
+            "client_id": client_id,
+            "daily_data": daily_data
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching daily breakdown: {str(e)}")

@@ -66,7 +66,7 @@ async def get_2025_ads_data(
         raise HTTPException(status_code=500, detail=f"Error fetching 2025 ads data: {str(e)}")
 
 
-@router.get("/top-performing", response_model=List[AdPerformance])
+@router.get("/top-performing")
 async def get_top_performing_ads(
     client_id: str = Query(..., description="Client Meta ad account ID"),
     period: str = Query("last_week", description="Time period: last_week, last_month"),
@@ -109,8 +109,16 @@ async def get_top_performing_ads(
             attribution=attribution,
             limit=limit
         )
-        
-        return top_ads
+
+        # Return structured response that matches frontend expectations
+        return {
+            "status": "success",
+            "period": period,
+            "client_id": client_id,
+            "attribution": attribution,
+            "total_ads": len(top_ads),
+            "ads": top_ads
+        }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching ads: {str(e)}")
