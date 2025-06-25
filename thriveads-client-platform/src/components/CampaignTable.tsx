@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown, Download, Eye } from 'lucide-react';
 import { CampaignData } from '../types/meta-ads';
-import { formatCurrency, formatNumber, formatPercentage, formatCTR, formatROAS, cn } from '../lib/utils';
+import { formatCurrency, formatNumber, formatCTR, formatROAS, cn } from '../lib/utils';
 
 interface CampaignTableProps {
   campaigns: CampaignData[];
@@ -28,8 +28,8 @@ export function CampaignTable({ campaigns, className }: CampaignTableProps) {
   };
 
   const sortedCampaigns = [...campaigns].sort((a, b) => {
-    let aValue: any;
-    let bValue: any;
+    let aValue: string | number;
+    let bValue: string | number;
 
     switch (sortField) {
       case 'name':

@@ -99,6 +99,23 @@ export interface WeekComparison {
   currency: string;
 }
 
+export interface DashboardData {
+  client_id: string;
+  client_name: string;
+  ad_account_id: string;
+  last_updated: string;
+  period: string;
+  date_range: {
+    since: string;
+    until: string;
+  };
+  summary: CampaignMetrics;
+  campaigns: CampaignData[];
+  daily_breakdown?: DailyMetrics[];
+  weekly_breakdown?: WeeklyMetrics[];
+  week_comparison?: WeekComparison;
+}
+
 export interface DailyMetrics {
   date: string;
   metrics: CampaignMetrics;
@@ -220,7 +237,7 @@ class ApiService {
    */
   async getDashboardData(
     period: 'last_week' | 'last_month' = 'last_week'
-  ): Promise<ApiResponse<any>> {
+  ): Promise<ApiResponse<DashboardData>> {
     // For now, we'll combine multiple API calls to get dashboard data
     // In the future, the backend could provide a single dashboard endpoint
 

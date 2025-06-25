@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Minus, Calendar, RefreshCw } from 'lucide-react';
-import { WeekComparison as WeekComparisonType, MetricChange } from '../types/meta-ads';
+import { WeekComparison as WeekComparisonType, MetricChange, MetaAdMetrics } from '../types/meta-ads';
 import { formatCurrency, formatROAS, formatNumber, cn } from '../lib/utils';
-import { apiService, type WeekComparison as ApiWeekComparison } from '../services/api';
+import { apiService } from '../services/api';
 
 interface WeekComparisonProps {
   className?: string;
@@ -114,11 +114,11 @@ export function WeekComparison({ className }: WeekComparisonProps) {
       const convertedData: WeekComparisonType = {
         current_week: {
           date_range: { since: '', until: '' }, // API doesn't provide this
-          summary: apiData.current_week.metrics as any
+          summary: apiData.current_week.metrics as MetaAdMetrics
         },
         previous_week: {
           date_range: { since: '', until: '' }, // API doesn't provide this
-          summary: apiData.previous_week.metrics as any
+          summary: apiData.previous_week.metrics as MetaAdMetrics
         },
         changes: {
           spend: {

@@ -10,10 +10,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
+  ResponsiveContainer
 } from 'recharts';
 import { BarChart3 } from 'lucide-react';
 import { DailyMetrics, WeeklyMetrics, CampaignData } from '../types/meta-ads';

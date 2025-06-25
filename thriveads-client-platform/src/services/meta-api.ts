@@ -1,4 +1,4 @@
-import { AttributionWindow, ClientDashboardData, CampaignData, DailyMetrics, MetaAdMetrics, PurchaseConversions } from '../types/meta-ads';
+import { CampaignData, DailyMetrics, MetaAdMetrics, PurchaseConversions } from '../types/meta-ads';
 import { ClientConfig } from '../config/clients';
 
 // Meta API Configuration
@@ -7,6 +7,39 @@ interface MetaAPIConfig {
   apiVersion: string;
   adAccountId: string;
   clientConfig: ClientConfig;
+}
+
+// Meta API Action types
+interface MetaAction {
+  action_type: string;
+  value: string;
+  '1d_click'?: string;
+  '7d_click'?: string;
+  '1d_view'?: string;
+  '7d_view'?: string;
+}
+
+interface MetaActionValue {
+  action_type: string;
+  value: string;
+  '1d_click'?: string;
+  '7d_click'?: string;
+  '1d_view'?: string;
+  '7d_view'?: string;
+}
+
+interface MetaAPIResponse {
+  spend?: string;
+  impressions?: string;
+  clicks?: string;
+  ctr?: string;
+  cpc?: string;
+  cpm?: string;
+  reach?: string;
+  frequency?: string;
+  actions?: MetaAction[];
+  action_values?: MetaActionValue[];
+  [key: string]: string | MetaAction[] | MetaActionValue[] | undefined;
 }
 
 // Meta API Response Types
@@ -134,8 +167,8 @@ export class MetaAPIService {
    * Process Meta API response and extract purchase conversions with proper attribution
    */
   private extractPurchaseConversions(
-    actions?: Array<any>, 
-    actionValues?: Array<any>
+    actions?: MetaAction[],
+    actionValues?: MetaActionValue[]
   ): PurchaseConversions {
     // Find purchase actions and values
     const purchaseAction = actions?.find(action => action.action_type === 'purchase');
@@ -156,7 +189,7 @@ export class MetaAPIService {
   /**
    * Convert Meta API response to our internal metrics format
    */
-  private convertToMetrics(data: any): MetaAdMetrics {
+  private convertToMetrics(data: MetaAPIResponse): MetaAdMetrics {
     const purchases = this.extractPurchaseConversions(data.actions, data.action_values);
     const spend = parseFloat(data.spend || '0');
 
@@ -196,8 +229,8 @@ export class MetaAPIService {
       video_play_actions: data.video_play_actions?.[0]?.value ? parseInt(data.video_play_actions[0].value) : undefined,
       
       // Quality metrics
-      quality_ranking: data.quality_ranking as any,
-      engagement_rate_ranking: data.engagement_rate_ranking as any
+      quality_ranking: data.quality_ranking as string | undefined,
+      engagement_rate_ranking: data.engagement_rate_ranking as string | undefined
     };
   }
 

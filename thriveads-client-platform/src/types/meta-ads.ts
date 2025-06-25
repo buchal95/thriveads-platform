@@ -83,7 +83,11 @@ export interface AdSetData {
     age_min?: number;
     age_max?: number;
     genders?: number[];
-    geo_locations?: any;
+    geo_locations?: {
+      countries?: string[];
+      regions?: Array<{ key: string; name: string }>;
+      cities?: Array<{ key: string; name: string; region_id?: string }>;
+    };
   };
   metrics: MetaAdMetrics;
 }
@@ -102,7 +106,17 @@ export interface AdData {
     image_url?: string;
     thumbnail_url?: string;
     video_url?: string;
-    object_story_spec?: any;
+    object_story_spec?: {
+      page_id?: string;
+      instagram_actor_id?: string;
+      link_data?: {
+        link?: string;
+        message?: string;
+        name?: string;
+        description?: string;
+        picture?: string;
+      };
+    };
   };
   facebook_url: string; // Direct link to Facebook ad
   metrics: MetaAdMetrics;
