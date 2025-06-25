@@ -126,13 +126,13 @@ async def get_top_performing_ads(
         # Convert to the format expected by frontend
         formatted_ads = []
         for ad in top_ads:
+            ad_id = ad.get('ad_id')
             formatted_ad = {
-                "id": ad.get('ad_id'),
+                "id": ad_id,
                 "name": ad.get('ad_name'),
                 "status": ad.get('status', 'active'),
                 "campaign_name": ad.get('campaign_name'),
-                "preview_url": f"https://www.facebook.com/ads/library/?id={ad.get('ad_id')}",
-                "facebook_url": f"https://www.facebook.com/ads/library/?id={ad.get('ad_id')}",
+                "facebook_url": f"https://www.facebook.com/ads/library/?id={ad_id}&search_type=all&media_type=all",
                 "metrics": {
                     "impressions": ad.get('impressions', 0),
                     "clicks": ad.get('clicks', 0),
