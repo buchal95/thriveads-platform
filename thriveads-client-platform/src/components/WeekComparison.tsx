@@ -118,13 +118,13 @@ export function WeekComparison({ className }: WeekComparisonProps) {
           date_range: { since: '', until: '' }, // API doesn't provide this
           summary: apiData.previous_week.metrics as any
         },
-        changes: Object.entries(apiData.changes).reduce((acc, [key, value]) => {
+        changes: Object.entries(apiData.metrics_comparison).reduce((acc, [key, value]) => {
           acc[key] = {
             current: 0,
             previous: 0,
-            absolute_change: value.absolute,
-            percentage_change: value.percentage,
-            trend: value.percentage > 0 ? 'up' : value.percentage < 0 ? 'down' : 'neutral'
+            absolute_change: 0,
+            percentage_change: value as number,
+            trend: (value as number) > 0 ? 'up' : (value as number) < 0 ? 'down' : 'neutral'
           } as MetricChange;
           return acc;
         }, {} as any)
@@ -238,22 +238,22 @@ export function WeekComparison({ className }: WeekComparisonProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <MetricCard
             label="Celkové náklady"
-            change={comparison.changes.spend}
+            change={comparison.changes.spend_change}
             format="currency"
           />
           <MetricCard
             label="ROAS (Default)"
-            change={comparison.changes.roas}
+            change={comparison.changes.roas_change}
             format="roas"
           />
           <MetricCard
             label="Konverze"
-            change={comparison.changes.conversions}
+            change={comparison.changes.conversions_change}
             format="number"
           />
           <MetricCard
             label="Zobrazení"
-            change={comparison.changes.impressions}
+            change={comparison.changes.impressions_change}
             format="number"
           />
         </div>
@@ -261,13 +261,13 @@ export function WeekComparison({ className }: WeekComparisonProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <MetricCard
             label="Kliky"
-            change={comparison.changes.clicks}
+            change={comparison.changes.clicks_change}
             format="number"
           />
           <MetricCard
-            label="ROAS (7d klik)"
-            change={comparison.changes.roas_7d_click}
-            format="roas"
+            label="CTR"
+            change={comparison.changes.ctr_change}
+            format="percentage"
           />
         </div>
 
@@ -275,16 +275,16 @@ export function WeekComparison({ className }: WeekComparisonProps) {
         <div className="mt-6 p-4 bg-blue-50 rounded-lg">
           <h4 className="font-medium text-blue-900 mb-2">Týdenní přehled</h4>
           <div className="text-sm text-blue-800 space-y-1">
-            {comparison.changes.roas.trend === 'up' && (
-              <p>✅ ROAS se zlepšil o {comparison.changes.roas.percentage_change.toFixed(1)}% - kampaně jsou efektivnější</p>
+            {comparison.changes.roas_change.trend === 'up' && (
+              <p>✅ ROAS se zlepšil o {comparison.changes.roas_change.percentage_change.toFixed(1)}% - kampaně jsou efektivnější</p>
             )}
-            {comparison.changes.conversions.trend === 'up' && (
-              <p>✅ Počet konverzí vzrostl o {comparison.changes.conversions.percentage_change.toFixed(1)}%</p>
+            {comparison.changes.conversions_change.trend === 'up' && (
+              <p>✅ Počet konverzí vzrostl o {comparison.changes.conversions_change.percentage_change.toFixed(1)}%</p>
             )}
-            {comparison.changes.spend.trend === 'down' && (
-              <p>💰 Náklady klesly o {Math.abs(comparison.changes.spend.percentage_change).toFixed(1)}% při zachování výkonu</p>
+            {comparison.changes.spend_change.trend === 'down' && (
+              <p>💰 Náklady klesly o {Math.abs(comparison.changes.spend_change.percentage_change).toFixed(1)}% při zachování výkonu</p>
             )}
-            {comparison.changes.spend.trend === 'up' && comparison.changes.roas.trend === 'up' && (
+            {comparison.changes.spend_change.trend === 'up' && comparison.changes.roas_change.trend === 'up' && (
               <p>📈 Vyšší investice přinesly lepší výsledky - dobrá škálovatelnost</p>
             )}
           </div>
