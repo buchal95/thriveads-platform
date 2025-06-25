@@ -63,20 +63,40 @@ export interface ConversionFunnel {
 }
 
 export interface WeekComparison {
+  client_id: string;
   current_week: {
-    period: string;
-    metrics: CampaignMetrics;
-  };
-  previous_week: {
-    period: string;
-    metrics: CampaignMetrics;
-  };
-  changes: {
-    [key: string]: {
-      absolute: number;
-      percentage: number;
+    start_date: string;
+    end_date: string;
+    metrics: {
+      spend: number;
+      roas: number;
+      conversions: number;
+      ctr: number;
+      impressions: number;
+      clicks: number;
     };
   };
+  previous_week: {
+    start_date: string;
+    end_date: string;
+    metrics: {
+      spend: number;
+      roas: number;
+      conversions: number;
+      ctr: number;
+      impressions: number;
+      clicks: number;
+    };
+  };
+  metrics_comparison: {
+    spend_change: number;
+    roas_change: number;
+    conversions_change: number;
+    ctr_change: number;
+    impressions_change: number;
+    clicks_change: number;
+  };
+  currency: string;
 }
 
 export interface DailyMetrics {
