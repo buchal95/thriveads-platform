@@ -908,6 +908,7 @@ class MetaService:
                     'actions',
                     'action_values',
                     'ctr',
+                    'reach',
                     'account_currency'
                 ],
                 params={
@@ -928,6 +929,7 @@ class MetaService:
                     'actions',
                     'action_values',
                     'ctr',
+                    'reach',
                     'account_currency'
                 ],
                 params={
@@ -945,7 +947,7 @@ class MetaService:
 
             # Calculate percentage changes
             metrics_comparison = {}
-            for metric in ['spend', 'roas', 'conversions', 'ctr', 'impressions', 'clicks']:
+            for metric in ['spend', 'roas', 'conversions', 'ctr', 'cpc', 'cpm', 'frequency', 'impressions', 'clicks', 'reach']:
                 current_value = current_metrics.get(metric, 0)
                 previous_value = previous_metrics.get(metric, 0)
 
@@ -984,8 +986,12 @@ class MetaService:
                 'roas': 0.0,
                 'conversions': 0,
                 'ctr': 0.0,
+                'cpc': 0.0,
+                'cpm': 0.0,
+                'frequency': 0.0,
                 'impressions': 0,
-                'clicks': 0
+                'clicks': 0,
+                'reach': 0
             }
 
         # Extract basic metrics
@@ -993,6 +999,7 @@ class MetaService:
         clicks = int(insight.get('clicks', 0))
         spend = float(insight.get('spend', 0))
         ctr = float(insight.get('ctr', 0))
+        reach = int(insight.get('reach', 0))
 
         # Extract conversions and conversion value
         conversions = 0
@@ -1009,16 +1016,23 @@ class MetaService:
             if action_value.get('action_type') == 'purchase':
                 conversion_value += float(action_value.get('value', 0))
 
-        # Calculate ROAS
+        # Calculate derived metrics
         roas = conversion_value / spend if spend > 0 else 0.0
+        cpc = spend / clicks if clicks > 0 else 0.0
+        cpm = spend / impressions * 1000 if impressions > 0 else 0.0
+        frequency = impressions / reach if reach > 0 else 0.0
 
         return {
             'spend': spend,
             'roas': roas,
             'conversions': conversions,
             'ctr': ctr,
+            'cpc': cpc,
+            'cpm': cpm,
+            'frequency': frequency,
             'impressions': impressions,
-            'clicks': clicks
+            'clicks': clicks,
+            'reach': reach
         }
 
     async def get_daily_breakdown(
