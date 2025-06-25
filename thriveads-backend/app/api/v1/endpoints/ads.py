@@ -95,14 +95,59 @@ async def get_top_performing_ads(
         else:
             raise HTTPException(status_code=400, detail="Invalid period")
         
-        # Fetch top performing ads from Meta API
-        top_ads = await meta_service.get_top_performing_ads(
+        # Use the working get_ads_with_metrics method and then sort by ROAS
+        ads_data = await meta_service.get_ads_with_metrics(
             client_id=client_id,
             start_date=start_date,
             end_date=end_date,
-            attribution=attribution,
-            limit=limit
+            fields=[
+                'ad_id', 'ad_name', 'campaign_id', 'campaign_name', 'spend',
+                'impressions', 'clicks', 'actions', 'cpm', 'cpc', 'ctr',
+                'frequency', 'reach'
+            ],
+            active_only=True
         )
+
+        # Calculate ROAS and sort by it
+        for ad in ads_data:
+            # Extract conversions and conversion value from actions
+            conversions = ad.get('conversions', 0)
+            spend = ad.get('spend', 0)
+
+            # For now, estimate conversion value (this should be improved)
+            estimated_conversion_value = conversions * 400  # Estimate 400 CZK per conversion
+            roas = estimated_conversion_value / spend if spend > 0 else 0
+            ad['roas'] = roas
+
+        # Sort by ROAS and take top performers
+        ads_data.sort(key=lambda x: x.get('roas', 0), reverse=True)
+        top_ads = ads_data[:limit]
+
+        # Convert to the format expected by frontend
+        formatted_ads = []
+        for ad in top_ads:
+            formatted_ad = {
+                "id": ad.get('ad_id'),
+                "name": ad.get('ad_name'),
+                "status": ad.get('status', 'active'),
+                "campaign_name": ad.get('campaign_name'),
+                "preview_url": f"https://www.facebook.com/ads/library/?id={ad.get('ad_id')}",
+                "facebook_url": f"https://www.facebook.com/ads/library/?id={ad.get('ad_id')}",
+                "metrics": {
+                    "impressions": ad.get('impressions', 0),
+                    "clicks": ad.get('clicks', 0),
+                    "spend": ad.get('spend', 0),
+                    "conversions": ad.get('conversions', 0),
+                    "ctr": ad.get('ctr', 0),
+                    "cpc": ad.get('cpc', 0),
+                    "cpm": ad.get('cpm', 0),
+                    "roas": ad.get('roas', 0),
+                    "frequency": ad.get('frequency', 0)
+                },
+                "currency": "CZK",
+                "attribution": attribution
+            }
+            formatted_ads.append(formatted_ad)
 
         # Return structured response that matches frontend expectations
         return {
@@ -110,8 +155,8 @@ async def get_top_performing_ads(
             "period": period,
             "client_id": client_id,
             "attribution": attribution,
-            "total_ads": len(top_ads),
-            "ads": top_ads
+            "total_ads": len(formatted_ads),
+            "ads": formatted_ads
         }
         
     except Exception as e:
