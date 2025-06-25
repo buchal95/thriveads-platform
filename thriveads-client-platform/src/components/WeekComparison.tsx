@@ -13,7 +13,7 @@ interface WeekComparisonProps {
 interface MetricCardProps {
   label: string;
   change: MetricChange;
-  format: 'currency' | 'number' | 'roas';
+  format: 'currency' | 'number' | 'roas' | 'percentage';
   icon?: React.ReactNode;
 }
 
@@ -26,6 +26,8 @@ function MetricCard({ label, change, format, icon }: MetricCardProps) {
         return formatROAS(value);
       case 'number':
         return formatNumber(value);
+      case 'percentage':
+        return `${value.toFixed(2)}%`;
       default:
         return value.toLocaleString();
     }
@@ -118,16 +120,50 @@ export function WeekComparison({ className }: WeekComparisonProps) {
           date_range: { since: '', until: '' }, // API doesn't provide this
           summary: apiData.previous_week.metrics as any
         },
-        changes: Object.entries(apiData.metrics_comparison).reduce((acc, [key, value]) => {
-          acc[key] = {
-            current: 0,
-            previous: 0,
-            absolute_change: 0,
-            percentage_change: value as number,
-            trend: (value as number) > 0 ? 'up' : (value as number) < 0 ? 'down' : 'neutral'
-          } as MetricChange;
-          return acc;
-        }, {} as any)
+        changes: {
+          spend: {
+            current: apiData.current_week.metrics.spend,
+            previous: apiData.previous_week.metrics.spend,
+            absolute_change: apiData.current_week.metrics.spend - apiData.previous_week.metrics.spend,
+            percentage_change: apiData.metrics_comparison.spend_change,
+            trend: apiData.metrics_comparison.spend_change > 0 ? 'up' : apiData.metrics_comparison.spend_change < 0 ? 'down' : 'neutral'
+          },
+          impressions: {
+            current: apiData.current_week.metrics.impressions,
+            previous: apiData.previous_week.metrics.impressions,
+            absolute_change: apiData.current_week.metrics.impressions - apiData.previous_week.metrics.impressions,
+            percentage_change: apiData.metrics_comparison.impressions_change,
+            trend: apiData.metrics_comparison.impressions_change > 0 ? 'up' : apiData.metrics_comparison.impressions_change < 0 ? 'down' : 'neutral'
+          },
+          clicks: {
+            current: apiData.current_week.metrics.clicks,
+            previous: apiData.previous_week.metrics.clicks,
+            absolute_change: apiData.current_week.metrics.clicks - apiData.previous_week.metrics.clicks,
+            percentage_change: apiData.metrics_comparison.clicks_change,
+            trend: apiData.metrics_comparison.clicks_change > 0 ? 'up' : apiData.metrics_comparison.clicks_change < 0 ? 'down' : 'neutral'
+          },
+          conversions: {
+            current: apiData.current_week.metrics.conversions,
+            previous: apiData.previous_week.metrics.conversions,
+            absolute_change: apiData.current_week.metrics.conversions - apiData.previous_week.metrics.conversions,
+            percentage_change: apiData.metrics_comparison.conversions_change,
+            trend: apiData.metrics_comparison.conversions_change > 0 ? 'up' : apiData.metrics_comparison.conversions_change < 0 ? 'down' : 'neutral'
+          },
+          roas: {
+            current: apiData.current_week.metrics.roas,
+            previous: apiData.previous_week.metrics.roas,
+            absolute_change: apiData.current_week.metrics.roas - apiData.previous_week.metrics.roas,
+            percentage_change: apiData.metrics_comparison.roas_change,
+            trend: apiData.metrics_comparison.roas_change > 0 ? 'up' : apiData.metrics_comparison.roas_change < 0 ? 'down' : 'neutral'
+          },
+          roas_7d_click: {
+            current: apiData.current_week.metrics.roas, // Use same as roas since API doesn't separate
+            previous: apiData.previous_week.metrics.roas,
+            absolute_change: apiData.current_week.metrics.roas - apiData.previous_week.metrics.roas,
+            percentage_change: apiData.metrics_comparison.roas_change,
+            trend: apiData.metrics_comparison.roas_change > 0 ? 'up' : apiData.metrics_comparison.roas_change < 0 ? 'down' : 'neutral'
+          }
+        }
       };
 
       setComparison(convertedData);
@@ -238,22 +274,22 @@ export function WeekComparison({ className }: WeekComparisonProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <MetricCard
             label="Celkové náklady"
-            change={comparison.changes.spend_change}
+            change={comparison.changes.spend}
             format="currency"
           />
           <MetricCard
             label="ROAS (Default)"
-            change={comparison.changes.roas_change}
+            change={comparison.changes.roas}
             format="roas"
           />
           <MetricCard
             label="Konverze"
-            change={comparison.changes.conversions_change}
+            change={comparison.changes.conversions}
             format="number"
           />
           <MetricCard
             label="Zobrazení"
-            change={comparison.changes.impressions_change}
+            change={comparison.changes.impressions}
             format="number"
           />
         </div>
@@ -261,13 +297,13 @@ export function WeekComparison({ className }: WeekComparisonProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <MetricCard
             label="Kliky"
-            change={comparison.changes.clicks_change}
+            change={comparison.changes.clicks}
             format="number"
           />
           <MetricCard
-            label="CTR"
-            change={comparison.changes.ctr_change}
-            format="percentage"
+            label="ROAS (7d klik)"
+            change={comparison.changes.roas_7d_click}
+            format="roas"
           />
         </div>
 
@@ -275,16 +311,16 @@ export function WeekComparison({ className }: WeekComparisonProps) {
         <div className="mt-6 p-4 bg-blue-50 rounded-lg">
           <h4 className="font-medium text-blue-900 mb-2">Týdenní přehled</h4>
           <div className="text-sm text-blue-800 space-y-1">
-            {comparison.changes.roas_change.trend === 'up' && (
-              <p>✅ ROAS se zlepšil o {comparison.changes.roas_change.percentage_change.toFixed(1)}% - kampaně jsou efektivnější</p>
+            {comparison.changes.roas.trend === 'up' && (
+              <p>✅ ROAS se zlepšil o {comparison.changes.roas.percentage_change.toFixed(1)}% - kampaně jsou efektivnější</p>
             )}
-            {comparison.changes.conversions_change.trend === 'up' && (
-              <p>✅ Počet konverzí vzrostl o {comparison.changes.conversions_change.percentage_change.toFixed(1)}%</p>
+            {comparison.changes.conversions.trend === 'up' && (
+              <p>✅ Počet konverzí vzrostl o {comparison.changes.conversions.percentage_change.toFixed(1)}%</p>
             )}
-            {comparison.changes.spend_change.trend === 'down' && (
-              <p>💰 Náklady klesly o {Math.abs(comparison.changes.spend_change.percentage_change).toFixed(1)}% při zachování výkonu</p>
+            {comparison.changes.spend.trend === 'down' && (
+              <p>💰 Náklady klesly o {Math.abs(comparison.changes.spend.percentage_change).toFixed(1)}% při zachování výkonu</p>
             )}
-            {comparison.changes.spend_change.trend === 'up' && comparison.changes.roas_change.trend === 'up' && (
+            {comparison.changes.spend.trend === 'up' && comparison.changes.roas.trend === 'up' && (
               <p>📈 Vyšší investice přinesly lepší výsledky - dobrá škálovatelnost</p>
             )}
           </div>
