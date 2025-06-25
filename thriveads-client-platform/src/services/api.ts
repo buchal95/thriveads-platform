@@ -205,6 +205,8 @@ class ApiService {
     // In the future, the backend could provide a single dashboard endpoint
 
     try {
+      console.log('Starting getDashboardData for period:', period);
+
       // Fetch all required data in parallel
       const campaignsPromise = this.getTopCampaigns(period, 'default', 20);
       const weekComparisonPromise = this.getWeekComparison();
@@ -223,15 +225,24 @@ class ApiService {
         breakdownPromise
       ]);
 
+      console.log('API responses received:', {
+        campaigns: campaignsResponse.status,
+        weekComparison: weekComparisonResponse.status,
+        breakdown: breakdownResponse.status
+      });
+
       if (campaignsResponse.error) {
+        console.error('Campaigns error:', campaignsResponse.error);
         return campaignsResponse;
       }
 
       if (weekComparisonResponse.error) {
+        console.error('Week comparison error:', weekComparisonResponse.error);
         return weekComparisonResponse;
       }
 
       if (breakdownResponse.error) {
+        console.error('Breakdown error:', breakdownResponse.error);
         return breakdownResponse;
       }
 
@@ -280,8 +291,8 @@ class ApiService {
         last_updated: new Date().toISOString(),
         period,
         date_range: {
-          since: weekComparison.current_week.period.split(' - ')[0] || '',
-          until: weekComparison.current_week.period.split(' - ')[1] || ''
+          since: weekComparison.current_week.start_date || '',
+          until: weekComparison.current_week.end_date || ''
         },
         summary,
         campaigns,
@@ -291,6 +302,12 @@ class ApiService {
           : { weekly_breakdown: breakdownData as WeeklyMetrics[] }
         )
       };
+
+      console.log('Dashboard data assembled successfully:', {
+        campaigns: campaigns.length,
+        summary: summary,
+        dateRange: dashboardData.date_range
+      });
 
       return {
         data: dashboardData,

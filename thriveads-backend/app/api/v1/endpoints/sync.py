@@ -527,3 +527,91 @@ async def populate_database_with_working_data(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error populating database: {str(e)}")
+
+
+@router.get("/dashboard-data")
+async def get_dashboard_data_formatted(
+    client_id: str = Query("513010266454814", description="Client Meta ad account ID"),
+    period: str = Query("last_week", description="Time period: last_week, last_month"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get dashboard data in the format expected by the frontend
+
+    This combines multiple API calls and formats the response correctly
+    """
+    try:
+        from app.services.meta_service import MetaService
+        from app.models.client import Client
+        from datetime import datetime, timedelta
+        import requests
+
+        # Get client info
+        client = db.query(Client).filter(Client.id == client_id).first()
+        if not client:
+            raise HTTPException(status_code=404, detail="Client not found")
+
+        # Calculate date range based on period
+        end_date = datetime.now().date()
+        if period == "last_week":
+            # Get last Monday to Sunday
+            days_since_monday = end_date.weekday()
+            last_monday = end_date - timedelta(days=days_since_monday + 7)
+            start_date = last_monday
+            end_date = last_monday + timedelta(days=6)
+        else:  # last_month
+            first_day_current_month = end_date.replace(day=1)
+            last_day_previous_month = first_day_current_month - timedelta(days=1)
+            start_date = last_day_previous_month.replace(day=1)
+            end_date = last_day_previous_month
+
+        # Get campaigns data
+        meta_service = MetaService()
+        campaigns_data = await meta_service.get_campaigns_with_metrics(
+            client_id=client_id,
+            start_date=start_date,
+            end_date=end_date,
+            active_only=True
+        )
+
+        # Calculate summary metrics from campaigns
+        total_spend = sum(float(c.get('spend', 0)) for c in campaigns_data)
+        total_impressions = sum(int(c.get('impressions', 0)) for c in campaigns_data)
+        total_clicks = sum(int(c.get('clicks', 0)) for c in campaigns_data)
+        total_conversions = sum(int(c.get('conversions', 0)) for c in campaigns_data)
+        total_conversion_value = sum(float(c.get('conversion_value', 0)) for c in campaigns_data)
+
+        # Calculate derived metrics
+        ctr = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0
+        cpc = (total_spend / total_clicks) if total_clicks > 0 else 0
+        cpm = (total_spend / total_impressions * 1000) if total_impressions > 0 else 0
+        roas = (total_conversion_value / total_spend) if total_spend > 0 else 0
+
+        # Format response as expected by frontend
+        dashboard_data = {
+            "client_id": client_id,
+            "client_name": client.name,
+            "ad_account_id": f"act_{client_id}",
+            "last_updated": datetime.utcnow().isoformat() + "Z",
+            "date_range": {
+                "since": start_date.isoformat(),
+                "until": end_date.isoformat()
+            },
+            "summary": {
+                "spend": total_spend,
+                "impressions": total_impressions,
+                "clicks": total_clicks,
+                "conversions": total_conversions,
+                "ctr": ctr,
+                "cpc": cpc,
+                "cpm": cpm,
+                "roas": roas
+            },
+            "campaigns": campaigns_data[:10],  # Top 10 campaigns
+            "daily_breakdown": []  # Will be populated by separate endpoint
+        }
+
+        return dashboard_data
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting dashboard data: {str(e)}")
