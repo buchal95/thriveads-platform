@@ -17,6 +17,7 @@ import { apiService } from '../services/api';
 export default function Dashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('last_week');
   const [dashboardData, setDashboardData] = useState<ClientDashboardData | null>(null);
+  const [clientInfo, setClientInfo] = useState<{ name: string; currency: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
@@ -31,6 +32,22 @@ export default function Dashboard() {
     const hours = date.getUTCHours();
     const minutes = date.getUTCMinutes();
     return `${day}. ${month}. ${year} ${hours}:${minutes.toString().padStart(2, '0')} UTC`;
+  };
+
+  // Fetch client information separately
+  const fetchClientInfo = async () => {
+    try {
+      const response = await apiService.getClientInfo();
+      if (response.data) {
+        setClientInfo({
+          name: response.data.name,
+          currency: response.data.currency
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch client info:', err);
+      // Don't set error for client info failure, just use mock data
+    }
   };
 
   // Fetch real Meta API data
@@ -83,6 +100,11 @@ export default function Dashboard() {
     setIsClient(true);
   }, []);
 
+  // Load client info on component mount
+  useEffect(() => {
+    fetchClientInfo();
+  }, []);
+
   // Load data on component mount and period change
   useEffect(() => {
     fetchMetaData(selectedPeriod);
@@ -114,6 +136,9 @@ export default function Dashboard() {
 
   // Use real data if available, fallback to mock
   const clientData = dashboardData || mockClientData;
+
+  // Override client name with real client info if available
+  const displayClientName = clientInfo?.name || clientData.client_name;
 
   // Get data based on selected period
   const currentData = selectedPeriod === 'last_week'
@@ -301,7 +326,7 @@ export default function Dashboard() {
                 <div className="flex items-center gap-3 pl-3 ml-2 border-l border-gray-200">
                   <div className="hidden sm:block text-right">
                     <div className="text-sm font-medium text-gray-900">
-                      {clientData.client_name}
+                      {displayClientName}
                     </div>
                     <div className="text-xs text-gray-500">
                       Klientský účet
@@ -332,7 +357,7 @@ export default function Dashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-                Vítejte zpět, {clientData.client_name}
+                Vítejte zpět, {displayClientName}
               </h1>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600">
                 <DateRangeDisplay

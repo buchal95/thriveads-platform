@@ -218,9 +218,9 @@ const mockWeeklyMetrics: WeeklyMetrics[] = [
 
 // Main mock dashboard data
 export const mockClientData: ClientDashboardData = {
-  client_id: 'client_001',
-  client_name: 'Protein & Co',
-  ad_account_id: 'act_123456789',
+  client_id: '513010266454814',
+  client_name: 'Mimilátky CZ',
+  ad_account_id: 'act_513010266454814',
   last_updated: '2024-11-25T14:30:00Z',
   
   last_week: {

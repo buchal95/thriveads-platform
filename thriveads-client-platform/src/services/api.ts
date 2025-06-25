@@ -333,6 +333,13 @@ class ApiService {
   }
 
   /**
+   * Get client information
+   */
+  async getClientInfo(): Promise<ApiResponse<{ id: string; name: string; currency: string }>> {
+    return this.makeRequest<{ id: string; name: string; currency: string }>(`/api/v1/clients/${this.clientId}`);
+  }
+
+  /**
    * Health check
    */
   async healthCheck(): Promise<ApiResponse<{ status: string; message: string }>> {
