@@ -18,7 +18,21 @@ interface MetricCardProps {
 }
 
 function MetricCard({ label, change, format, icon }: MetricCardProps) {
+  // Add defensive checks for undefined values
+  if (!change) {
+    return (
+      <div className="p-4 rounded-lg border bg-gray-50 border-gray-200">
+        <div className="text-sm font-medium text-gray-600">{label}</div>
+        <div className="text-2xl font-bold text-gray-900 mb-2">--</div>
+        <div className="text-xs text-gray-500">Žádná data</div>
+      </div>
+    );
+  }
+
   const formatValue = (value: number) => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return '--';
+    }
     switch (format) {
       case 'currency':
         return formatCurrency(value);
@@ -80,14 +94,14 @@ function MetricCard({ label, change, format, icon }: MetricCardProps) {
       <div className={cn('flex items-center gap-1 text-sm font-medium', getTrendColor())}>
         {getTrendIcon()}
         <span>
-          {change.percentage_change > 0 ? '+' : ''}{change.percentage_change.toFixed(1)}%
+          {(change.percentage_change || 0) > 0 ? '+' : ''}{(change.percentage_change || 0).toFixed(1)}%
         </span>
       </div>
-      
+
       <div className="text-xs text-gray-500 mt-1">
-        {format === 'currency' ? formatCurrency(Math.abs(change.absolute_change)) : 
-         format === 'roas' ? formatROAS(Math.abs(change.absolute_change)) :
-         formatNumber(Math.abs(change.absolute_change))} vs minulý týden
+        {format === 'currency' ? formatCurrency(Math.abs(change.absolute_change || 0)) :
+         format === 'roas' ? formatROAS(Math.abs(change.absolute_change || 0)) :
+         formatNumber(Math.abs(change.absolute_change || 0))} vs minulý týden
       </div>
     </div>
   );
@@ -111,6 +125,12 @@ export function WeekComparison({ className }: WeekComparisonProps) {
 
       // Convert API response to component format
       const apiData = response.data!;
+
+      // Add defensive checks for API response structure
+      if (!apiData.current_week?.metrics || !apiData.previous_week?.metrics || !apiData.metrics_comparison) {
+        throw new Error('Invalid API response structure');
+      }
+
       const convertedData: WeekComparisonType = {
         current_week: {
           date_range: { since: '', until: '' }, // API doesn't provide this
@@ -122,46 +142,46 @@ export function WeekComparison({ className }: WeekComparisonProps) {
         },
         changes: {
           spend: {
-            current: apiData.current_week.metrics.spend,
-            previous: apiData.previous_week.metrics.spend,
-            absolute_change: apiData.current_week.metrics.spend - apiData.previous_week.metrics.spend,
-            percentage_change: apiData.metrics_comparison.spend_change,
-            trend: apiData.metrics_comparison.spend_change > 0 ? 'up' : apiData.metrics_comparison.spend_change < 0 ? 'down' : 'neutral'
+            current: apiData.current_week.metrics.spend || 0,
+            previous: apiData.previous_week.metrics.spend || 0,
+            absolute_change: (apiData.current_week.metrics.spend || 0) - (apiData.previous_week.metrics.spend || 0),
+            percentage_change: apiData.metrics_comparison.spend_change || 0,
+            trend: (apiData.metrics_comparison.spend_change || 0) > 0 ? 'up' : (apiData.metrics_comparison.spend_change || 0) < 0 ? 'down' : 'neutral'
           },
           impressions: {
-            current: apiData.current_week.metrics.impressions,
-            previous: apiData.previous_week.metrics.impressions,
-            absolute_change: apiData.current_week.metrics.impressions - apiData.previous_week.metrics.impressions,
-            percentage_change: apiData.metrics_comparison.impressions_change,
-            trend: apiData.metrics_comparison.impressions_change > 0 ? 'up' : apiData.metrics_comparison.impressions_change < 0 ? 'down' : 'neutral'
+            current: apiData.current_week.metrics.impressions || 0,
+            previous: apiData.previous_week.metrics.impressions || 0,
+            absolute_change: (apiData.current_week.metrics.impressions || 0) - (apiData.previous_week.metrics.impressions || 0),
+            percentage_change: apiData.metrics_comparison.impressions_change || 0,
+            trend: (apiData.metrics_comparison.impressions_change || 0) > 0 ? 'up' : (apiData.metrics_comparison.impressions_change || 0) < 0 ? 'down' : 'neutral'
           },
           clicks: {
-            current: apiData.current_week.metrics.clicks,
-            previous: apiData.previous_week.metrics.clicks,
-            absolute_change: apiData.current_week.metrics.clicks - apiData.previous_week.metrics.clicks,
-            percentage_change: apiData.metrics_comparison.clicks_change,
-            trend: apiData.metrics_comparison.clicks_change > 0 ? 'up' : apiData.metrics_comparison.clicks_change < 0 ? 'down' : 'neutral'
+            current: apiData.current_week.metrics.clicks || 0,
+            previous: apiData.previous_week.metrics.clicks || 0,
+            absolute_change: (apiData.current_week.metrics.clicks || 0) - (apiData.previous_week.metrics.clicks || 0),
+            percentage_change: apiData.metrics_comparison.clicks_change || 0,
+            trend: (apiData.metrics_comparison.clicks_change || 0) > 0 ? 'up' : (apiData.metrics_comparison.clicks_change || 0) < 0 ? 'down' : 'neutral'
           },
           conversions: {
-            current: apiData.current_week.metrics.conversions,
-            previous: apiData.previous_week.metrics.conversions,
-            absolute_change: apiData.current_week.metrics.conversions - apiData.previous_week.metrics.conversions,
-            percentage_change: apiData.metrics_comparison.conversions_change,
-            trend: apiData.metrics_comparison.conversions_change > 0 ? 'up' : apiData.metrics_comparison.conversions_change < 0 ? 'down' : 'neutral'
+            current: apiData.current_week.metrics.conversions || 0,
+            previous: apiData.previous_week.metrics.conversions || 0,
+            absolute_change: (apiData.current_week.metrics.conversions || 0) - (apiData.previous_week.metrics.conversions || 0),
+            percentage_change: apiData.metrics_comparison.conversions_change || 0,
+            trend: (apiData.metrics_comparison.conversions_change || 0) > 0 ? 'up' : (apiData.metrics_comparison.conversions_change || 0) < 0 ? 'down' : 'neutral'
           },
           roas: {
-            current: apiData.current_week.metrics.roas,
-            previous: apiData.previous_week.metrics.roas,
-            absolute_change: apiData.current_week.metrics.roas - apiData.previous_week.metrics.roas,
-            percentage_change: apiData.metrics_comparison.roas_change,
-            trend: apiData.metrics_comparison.roas_change > 0 ? 'up' : apiData.metrics_comparison.roas_change < 0 ? 'down' : 'neutral'
+            current: apiData.current_week.metrics.roas || 0,
+            previous: apiData.previous_week.metrics.roas || 0,
+            absolute_change: (apiData.current_week.metrics.roas || 0) - (apiData.previous_week.metrics.roas || 0),
+            percentage_change: apiData.metrics_comparison.roas_change || 0,
+            trend: (apiData.metrics_comparison.roas_change || 0) > 0 ? 'up' : (apiData.metrics_comparison.roas_change || 0) < 0 ? 'down' : 'neutral'
           },
           roas_7d_click: {
-            current: apiData.current_week.metrics.roas, // Use same as roas since API doesn't separate
-            previous: apiData.previous_week.metrics.roas,
-            absolute_change: apiData.current_week.metrics.roas - apiData.previous_week.metrics.roas,
-            percentage_change: apiData.metrics_comparison.roas_change,
-            trend: apiData.metrics_comparison.roas_change > 0 ? 'up' : apiData.metrics_comparison.roas_change < 0 ? 'down' : 'neutral'
+            current: apiData.current_week.metrics.roas || 0, // Use same as roas since API doesn't separate
+            previous: apiData.previous_week.metrics.roas || 0,
+            absolute_change: (apiData.current_week.metrics.roas || 0) - (apiData.previous_week.metrics.roas || 0),
+            percentage_change: apiData.metrics_comparison.roas_change || 0,
+            trend: (apiData.metrics_comparison.roas_change || 0) > 0 ? 'up' : (apiData.metrics_comparison.roas_change || 0) < 0 ? 'down' : 'neutral'
           }
         }
       };
@@ -232,7 +252,7 @@ export function WeekComparison({ className }: WeekComparisonProps) {
     );
   }
 
-  if (!comparison) {
+  if (!comparison || !comparison.changes) {
     return (
       <div className={cn('bg-white rounded-xl p-6 shadow-sm border border-gray-200', className)}>
         <div className="flex items-center gap-2 mb-4">
